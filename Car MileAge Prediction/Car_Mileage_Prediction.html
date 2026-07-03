@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Mileage Prediction System</title>
+    <style>
+        :root {
+            --primary: #4FACFE;
+            --primary-dark: #00f2fe;
+            --text-main: #ffffff;
+            --text-muted: #e0e0e0;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Abstract shapes */
+        .shape {
+            position: fixed;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.6;
+        }
+        .shape-1 {
+            top: -10%; left: -10%; width: 400px; height: 400px;
+            background: #4FACFE; border-radius: 50%;
+        }
+        .shape-2 {
+            bottom: -10%; right: -10%; width: 500px; height: 500px;
+            background: #00f2fe; border-radius: 50%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            background: -webkit-linear-gradient(#fff, #a1c4fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            padding: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45);
+        }
+
+        .question-group {
+            margin-bottom: 2rem;
+        }
+
+        .question-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .question-label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            font-size: 0.8rem;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 150%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .options-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            color: var(--text-main);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            flex: 1 1 auto;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .option-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .option-btn.selected {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+            font-weight: bold;
+        }
+
+        .option-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .primary-btn, .secondary-btn {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            outline: none;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            color: white;
+            box-shadow: 0 8px 20px rgba(0, 114, 255, 0.4);
+            flex: 2;
+        }
+
+        .primary-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 114, 255, 0.6);
+        }
+
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            flex: 1;
+        }
+
+        .secondary-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #result-section {
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mileage-display {
+            font-size: 4rem;
+            font-weight: 800;
+            margin: 1rem 0;
+            background: -webkit-linear-gradient(#00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .explanation {
+            background: rgba(0,0,0,0.2);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-top: 1.5rem;
+            text-align: left;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+
+        .explanation ul {
+            margin-top: 0.5rem;
+            margin-left: 1.5rem;
+        }
+        
+        .suggestions-box {
+            background: rgba(46, 204, 113, 0.15);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-top: 1.5rem;
+            text-align: left;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+        
+        .suggestions-box strong {
+            color: #2ecc71;
+            font-size: 1.1rem;
+        }
+        
+        .suggestions-box ul {
+            margin-top: 0.5rem;
+            margin-left: 1.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            background: rgba(255,255,255,0.1);
+            margin: 0.2rem;
+        }
+        
+        .pos-impact { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.4); }
+        .neg-impact { background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.4); }
+
+        .error-msg {
+            color: #ff6b6b;
+            text-align: center;
+            margin-bottom: 1rem;
+            font-weight: bold;
+            display: none;
+        }
+
+        /* Chart Bar */
+        .chart-container {
+            margin-top: 2rem;
+            background: rgba(0,0,0,0.2);
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .chart-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f12711, #f5af19, #00b09b, #96c93d);
+            width: 0%;
+            transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .chart-markers {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        @media (max-width: 600px) {
+            .options-container { flex-direction: column; }
+            .actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+
+    <div class="container">
+        <header>
+            <h1>Car Mileage Predictor</h1>
+            <p>Smart estimates based on your vehicle specs, fuel type, and habits.</p>
+        </header>
+
+        <div class="card" id="form-card">
+            <div class="error-msg" id="error-msg">Please answer all questions before predicting.</div>
+            
+            <div id="questions-container">
+                <!-- Generated by JS -->
+            </div>
+
+            <div class="actions">
+                <button class="secondary-btn" onclick="resetForm()">Reset</button>
+                <button class="primary-btn" onclick="calculateMileage()">Predict Mileage</button>
+            </div>
+        </div>
+
+        <div class="card" id="result-section">
+            <h2>Estimated Efficiency</h2>
+            <div class="mileage-display"><span id="final-mileage">--</span> <span style="font-size: 1.5rem; color: white; -webkit-text-fill-color: initial;">km/l <span style="font-size: 0.8rem; opacity: 0.6;">(eq)</span></span></div>
+            <p>Based on your selected configuration.</p>
+            
+            <div class="chart-container">
+                <div class="chart-fill" id="chart-fill"></div>
+            </div>
+            <div class="chart-markers">
+                <span>0</span>
+                <span>15</span>
+                <span>30</span>
+                <span>45+ km/l</span>
+            </div>
+
+            <div id="suggestions-container"></div>
+            
+            <div class="explanation" id="explanation-box">
+                <!-- Filled by JS -->
+            </div>
+
+            <div class="actions" style="margin-top: 2rem;">
+                <button class="secondary-btn" onclick="editInputs()">Edit Inputs</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                id: 'fuel',
+                label: 'Fuel / Energy Source',
+                tooltip: 'The energy source fundamentally alters the basic efficiency.',
+                options: [
+                    { value: 'petrol', text: 'Petrol (Gasoline)', effect: 0 },
+                    { value: 'diesel', text: 'Diesel', effect: +3 },
+                    { value: 'hybrid', text: 'Hybrid', effect: +8 },
+                    { value: 'electric', text: '100% Electric (km/l eq.)', effect: +25 }
+                ]
+            },
+            {
+                id: 'vehicleType',
+                label: 'Vehicle Type',
+                tooltip: 'Body style heavily dictates aerodynamics and base weight.',
+                options: [
+                    { value: 'small', text: 'Small Car (Hatchback)', effect: +4 },
+                    { value: 'sedan', text: 'Sedan', effect: +1 },
+                    { value: 'suv', text: 'SUV', effect: -3 },
+                    { value: 'sports', text: 'Sports Car', effect: -5 }
+                ]
+            },
+            {
+                id: 'seating',
+                label: 'Seating Capacity',
+                tooltip: 'More seats usually mean a larger, heavier chassis.',
+                options: [
+                    { value: '2', text: '2 Seats', effect: +2 },
+                    { value: '4', text: '4 Seats', effect: +0 },
+                    { value: '5', text: '5 Seats', effect: -1 },
+                    { value: '7', text: '7 Seats', effect: -3 }
+                ]
+            },
+            {
+                id: 'carSize',
+                label: 'Car Size',
+                tooltip: 'Overall mass of the vehicle.',
+                options: [
+                    { value: 'light', text: 'Light', effect: +2 },
+                    { value: 'medium', text: 'Medium', effect: +0 },
+                    { value: 'heavy', text: 'Heavy', effect: -3 }
+                ]
+            },
+            {
+                id: 'enginePower',
+                label: 'Engine Power',
+                tooltip: 'More powerful engines burn more fuel.',
+                options: [
+                    { value: 'low', text: 'Low (Economy)', effect: +3 },
+                    { value: 'medium', text: 'Medium', effect: +0 },
+                    { value: 'high', text: 'High (V6/V8/Turbo)', effect: -4 }
+                ]
+            },
+            {
+                id: 'performance',
+                label: 'Performance Level',
+                tooltip: 'Tuning profile of the car.',
+                options: [
+                    { value: 'basic', text: 'Basic', effect: +2 },
+                    { value: 'normal', text: 'Normal', effect: +0 },
+                    { value: 'high', text: 'High Performance', effect: -4 }
+                ]
+            },
+            {
+                id: 'gear',
+                label: 'Transmission',
+                tooltip: 'Manuals traditionally offer slightly better control over fuel economy in combustion engines.',
+                options: [
+                    { value: 'manual', text: 'Manual', effect: +1 },
+                    { value: 'auto', text: 'Automatic', effect: -1 }
+                ]
+            },
+            {
+                id: 'drivingStyle',
+                label: 'Driving Style',
+                tooltip: 'Aggressive acceleration burns significantly more fuel.',
+                options: [
+                    { value: 'smooth', text: 'Smooth / Eco', effect: +3 },
+                    { value: 'normal', text: 'Normal', effect: +0 },
+                    { value: 'aggressive', text: 'Aggressive', effect: -5 }
+                ]
+            },
+            {
+                id: 'roadType',
+                label: 'Typical Road Type',
+                tooltip: 'Stop-and-go city traffic ruins mileage compared to cruising on a highway.',
+                options: [
+                    { value: 'city', text: 'City Traffic', effect: -4 },
+                    { value: 'mixed', text: 'Mixed', effect: +0 },
+                    { value: 'highway', text: 'Highway', effect: +4 }
+                ]
+            },
+            {
+                id: 'ac',
+                label: 'AC Usage',
+                tooltip: 'Air conditioning puts extra load on the system.',
+                options: [
+                    { value: 'always', text: 'Always On', effect: -2 },
+                    { value: 'sometimes', text: 'Sometimes', effect: -0.5 },
+                    { value: 'rarely', text: 'Rarely', effect: +1 }
+                ]
+            },
+            {
+                id: 'load',
+                label: 'Passenger / Cargo Load',
+                tooltip: 'Extra weight drops efficiency drastically.',
+                options: [
+                    { value: 'light', text: 'Light (Just Driver)', effect: +1 },
+                    { value: 'medium', text: 'Medium', effect: -1 },
+                    { value: 'heavy', text: 'Heavy (Full Load)', effect: -3 }
+                ]
+            }
+        ];
+
+        let state = {};
+        const BASE_MILEAGE = 12; // Adjusted base km/l
+
+        const container = document.getElementById('questions-container');
+        
+        function renderQuestions() {
+            container.innerHTML = '';
+            questions.forEach(q => {
+                const group = document.createElement('div');
+                group.className = 'question-group';
+                
+                const label = document.createElement('div');
+                label.className = 'question-label';
+                label.innerHTML = `${q.label} <span class="tooltip" data-tip="${q.tooltip}">?</span>`;
+                group.appendChild(label);
+
+                const optsDiv = document.createElement('div');
+                optsDiv.className = 'options-container';
+
+                q.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.innerText = opt.text;
+                    btn.dataset.question = q.id;
+                    btn.dataset.value = opt.value;
+                    
+                    if (state[q.id] === opt.value) {
+                        btn.classList.add('selected');
+                    }
+
+                    btn.onclick = () => selectOption(q.id, opt.value, btn);
+                    optsDiv.appendChild(btn);
+                });
+
+                group.appendChild(optsDiv);
+                container.appendChild(group);
+            });
+            
+            enforceRules();
+        }
+
+        function selectOption(qId, val, btnElement) {
+            state[qId] = val;
+            
+            // Logic interconnections based on user selection
+            if (qId === 'fuel') {
+                if(val === 'electric') {
+                    // Electric implies automatic transmission
+                    state['gear'] = 'auto';
+                    // Electric removes low/high engine impact logic if we wanted, but let's keep it simple
+                }
+            }
+
+            if (qId === 'vehicleType') {
+                if(val === 'small') {
+                    state['carSize'] = 'light';
+                    state['enginePower'] = 'low';
+                } else if (val === 'suv') {
+                    state['carSize'] = 'heavy';
+                    state['seating'] = '5';
+                } else if (val === 'sports') {
+                    state['carSize'] = 'medium';
+                    state['enginePower'] = 'high';
+                    state['performance'] = 'high';
+                    state['seating'] = '2';
+                }
+            }
+            if (qId === 'seating') {
+                if(val === '7') state['carSize'] = 'heavy';
+                if(val === '2') state['carSize'] = 'light';
+            }
+
+            renderQuestions();
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        function enforceRules() {
+            const carSizeOpts = Array.from(document.querySelectorAll('.option-btn[data-question="carSize"]'));
+            const gearOpts = Array.from(document.querySelectorAll('.option-btn[data-question="gear"]'));
+            
+            carSizeOpts.forEach(btn => btn.disabled = false);
+            gearOpts.forEach(btn => btn.disabled = false);
+
+            if (state.seating === '7') {
+                carSizeOpts.forEach(btn => {
+                    if(btn.dataset.value === 'light') btn.disabled = true;
+                });
+                if(state.carSize === 'light') delete state.carSize;
+            }
+
+            if (state.fuel === 'electric') {
+                gearOpts.forEach(btn => {
+                    if(btn.dataset.value === 'manual') btn.disabled = true;
+                });
+                if(state.gear === 'manual') state.gear = 'auto';
+            }
+        }
+
+        function calculateMileage() {
+            const keys = questions.map(q => q.id);
+            const missing = keys.filter(k => !state[k]);
+
+            if (missing.length > 0) {
+                document.getElementById('error-msg').style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+
+            let finalMileage = BASE_MILEAGE;
+            let breakdown = [];
+
+            questions.forEach(q => {
+                const selectedVal = state[q.id];
+                const opt = q.options.find(o => o.value === selectedVal);
+                if(opt) {
+                    finalMileage += opt.effect;
+                    if (opt.effect !== 0) {
+                        breakdown.push({
+                            label: q.label,
+                            text: opt.text,
+                            effect: opt.effect
+                        });
+                    }
+                }
+            });
+
+            // Bounds capping
+            if (finalMileage < 4) finalMileage = 4;
+            if (finalMileage > 55) finalMileage = 55;
+
+            showResults(finalMileage, breakdown);
+        }
+
+        function showResults(mileage, breakdown) {
+            document.getElementById('form-card').style.display = 'none';
+            const res = document.getElementById('result-section');
+            res.style.display = 'block';
+            
+            // Generate Suggestions
+            let suggestionsHtml = '';
+            if (breakdown.some(b => b.effect < 0)) {
+                suggestionsHtml += `<div class="suggestions-box"><strong>Tips to Improve Mileage:</strong><ul>`;
+                
+                // Specific custom tips
+                if(state.drivingStyle === 'aggressive') {
+                     suggestionsHtml += `<li>Switching to a <em>Smooth</em> driving style instead of Aggressive can recover up to 8 km/l!</li>`;
+                }
+                if(state.ac === 'always') {
+                     suggestionsHtml += `<li>Turning off the AC when not needed can boost efficiency by 2+ km/l.</li>`;
+                }
+                if(state.roadType === 'city') {
+                     suggestionsHtml += `<li>Frequent stops in the city hurt mileage. Coast to stops and avoid sudden braking.</li>`;
+                }
+                if(state.load === 'heavy') {
+                     suggestionsHtml += `<li>Removing excess heavy cargo from the trunk when not needed will improve efficiency.</li>`;
+                }
+
+                // Generic tips for other negative factors
+                breakdown.filter(b => b.effect < 0 && !['drivingStyle', 'ac', 'roadType', 'load'].includes(b.label.toLowerCase())).forEach(b => {
+                    if (b.text.includes("High")) return; // Don't ask to lower engine power typically
+                    if (b.text.includes("Automatic")) return; // Usually a static choice
+                    // suggestionsHtml += `<li>Consider an alternative to <em>${b.text} (${b.label})</em> to reclaim ${Math.abs(b.effect)} km/l eq.</li>`;
+                });
+                
+                suggestionsHtml += `</ul></div>`;
+            }
+            document.getElementById('suggestions-container').innerHTML = suggestionsHtml;
+
+            // Counter animation
+            const display = document.getElementById('final-mileage');
+            let current = 0;
+            const timer = setInterval(() => {
+                current += 1.5;
+                if(current >= mileage) {
+                    current = mileage;
+                    clearInterval(timer);
+                }
+                display.innerText = current.toFixed(1);
+            }, 20);
+
+            // Chart Animation scale 0 - 55
+            setTimeout(() => {
+                const pct = Math.min((mileage / 55) * 100, 100);
+                document.getElementById('chart-fill').style.width = pct + '%';
+            }, 100);
+
+            // Build Explanation
+            let html = `<strong>How we calculated this:</strong><br>
+                        Base average mileage assumed: ${BASE_MILEAGE} km/l.<br><br>
+                        <strong>Impact Factors:</strong><ul>`;
+            
+            breakdown.forEach(b => {
+                let badgeClass = b.effect > 0 ? 'pos-impact' : 'neg-impact';
+                let sign = b.effect > 0 ? '+' : '';
+                html += `<li>${b.label}: <em>${b.text}</em> <span class="badge ${badgeClass}">${sign}${b.effect}</span></li>`;
+            });
+
+            html += `</ul><br>
+                     <p style="font-size:0.85rem; opacity:0.8;">
+                     <em>Note:</em> EV "km/l eq." is based on mpge equivalents translated to km/l for unified comparison metrics.
+                     </p>`;
+
+            document.getElementById('explanation-box').innerHTML = html;
+        }
+
+        function editInputs() {
+            document.getElementById('result-section').style.display = 'none';
+            document.getElementById('form-card').style.display = 'block';
+            document.getElementById('chart-fill').style.width = '0%';
+        }
+
+        function resetForm() {
+            state = {};
+            renderQuestions();
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        renderQuestions();
+    </script>
+</body>
+</html>
