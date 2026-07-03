@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lumina Ultimate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg: #F0F2F5; --sidebar-bg: rgba(255, 255, 255, 0.7); --bubble-self: #D9FDD3;
+            --bubble-other: rgba(255, 255, 255, 0.8); --accent: #7E91FF; --accent-hover: #5d75ff;
+            --text-dark: #2c3e50; --text-light: #7f8c8d; --glass-border: rgba(255, 255, 255, 0.5);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05); --liquid-anim: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background-color: var(--bg); background-image: radial-gradient(at 40% 20%, hsla(228,100%,74%,0.1) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(189,100%,56%,0.1) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(355,100%,93%,0.2) 0px, transparent 50%); display: flex; height: 100vh; overflow: hidden; color: var(--text-dark); transition: background-color 0.5s ease; }
+        .glass { background: var(--sidebar-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); }
+
+        .app-container { display: flex; width: 100%; height: 100%; max-width: 1600px; margin: 0 auto; position: relative; }
+        .sidebar { width: 350px; height: 100%; display: flex; flex-direction: column; border-right: 1px solid var(--glass-border); z-index: 10; transition: transform 0.5s var(--liquid-anim); }
+        .sidebar-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .sidebar-header h2 { font-size: 1.5rem; color: var(--accent); transition: color 0.5s ease;}
+        
+        .qr-btn { background: transparent; border: 2px solid var(--accent); color: var(--accent); border-radius: 20px; padding: 5px 15px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
+        .qr-btn:hover { transform: scale(1.05); background: var(--accent); color: white; }
+
+        .group-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .group-item { padding: 15px; border-radius: 15px; cursor: pointer; margin-bottom: 5px; display: flex; align-items: center; transition: all 0.3s var(--liquid-anim); background: transparent; border: 1px solid transparent; }
+        .group-item:hover { transform: translateY(-2px) scale(1.03); background: rgba(255, 255, 255, 0.9); }
+        .group-item.active { background: white; border-color: var(--accent); box-shadow: 0 4px 20px rgba(126, 145, 255, 0.15); transition: border-color 0.5s ease; }
+        .group-item .group-icon { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .new-group-container { padding: 20px; border-top: 1px solid rgba(0,0,0,0.05); }
+
+        .main-chat { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .chat-header { padding: 15px 25px; display: flex; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); z-index: 5; }
+        .chat-header .room-title { font-size: 1.2rem; font-weight: 600; margin-left: 10px; }
+        .mobile-toggle { display: none; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--accent); padding: 5px; margin-right: 10px; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        .message { max-width: 70%; animation: popIn 0.4s var(--liquid-anim) forwards; display: flex; flex-direction: column; }
+        .message.self { align-self: flex-end; }
+        .message.other { align-self: flex-start; }
+        .message-content { padding: 12px 18px; border-radius: 20px; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.03); line-height: 1.4; word-wrap: break-word; }
+        .message.self .message-content { background: var(--bubble-self); border-bottom-right-radius: 5px; }
+        .message.other .message-content { background: var(--bubble-other); border-bottom-left-radius: 5px; border: 1px solid var(--glass-border); }
+        .message-sender { font-size: 0.75rem; color: var(--text-light); margin-bottom: 4px; margin-left: 5px; display: flex; align-items: center; gap: 5px; }
+        .message.self .message-sender { justify-content: flex-end; margin-right: 5px; }
+        .profile-initial { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.6rem; }
+        
+        .file-message { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 12px; text-decoration: none; color: inherit; }
+        .file-message img { max-width: 100%; border-radius: 10px; margin-top: 5px; }
+        audio { height: 35px; border-radius: 20px; }
+
+        .chat-input-area { padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-top: 1px solid rgba(0,0,0,0.05); display: flex; gap: 15px; align-items: center; }
+        .input-wrapper { flex: 1; position: relative; }
+        .chat-input { width: 100%; padding: 15px 20px; border-radius: 25px; border: 1px solid transparent; background: white; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02), 0 2px 10px rgba(0,0,0,0.02); font-size: 1rem; outline: none; transition: all 0.3s ease; }
+        .chat-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(126, 145, 255, 0.2); }
+        .liquid-btn { background: var(--accent); color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: 600; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(126, 145, 255, 0.4); transition: all 0.3s var(--liquid-anim); }
+        .liquid-btn:hover { transform: scale(1.10); background: var(--accent-hover); box-shadow: 0 6px 20px rgba(126, 145, 255, 0.6); }
+
+        .voice-btn { background: white; color: var(--accent); padding: 12px; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .voice-btn.recording { animation: pulseRecord 1.5s infinite; background: #ff5252; color: white; }
+        @keyframes pulseRecord { 0% { transform: scale(0.95); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 82, 82, 0); } 100% { transform: scale(0.95); } }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal.active { opacity: 1; pointer-events: all; }
+        .modal-content { padding: 40px; border-radius: 24px; text-align: center; max-width: 400px; width: 90%; transform: scale(0.8); transition: transform 0.4s var(--liquid-anim); }
+        .modal.active .modal-content { transform: scale(1); }
+        .modal h2 { margin-bottom: 20px; color: var(--accent); transition: color 0.5s ease; }
+        .modal input[type="text"] { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 20px; font-size: 1rem; outline: none; }
+        .close-modal { position: absolute; top: 15px; right: 15px; cursor: pointer; background: none; border: none; font-size: 1.5rem; color: #aaa; }
+
+        .md-bold { font-weight: bold; }
+        .md-italic { font-style: italic; }
+        .md-code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+
+        @media (max-width: 768px) {
+            .sidebar { position: absolute; top: 0; left: 0; width: 85%; max-width: 350px; background: rgba(255,255,255,0.95); transform: translateX(-100%); box-shadow: none; }
+            .sidebar.open { transform: translateX(0); box-shadow: 5px 0 25px rgba(0,0,0,0.1); }
+            .mobile-toggle { display: block; }
+            .chat-header { padding: 10px 15px; } .message { max-width: 85%; }
+            .chat-input-area { padding: 10px; gap: 8px; } .liquid-btn { padding: 12px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Startup Mode Selection -->
+    <div id="startup-modal" class="modal active">
+        <div class="modal-content glass">
+            <h2 style="color:var(--accent);">Lumina Networks</h2>
+            <p style="margin-bottom:20px; color:var(--text-light); font-size:0.9rem;">Select how you want to connect.</p>
+            <button id="btn-lan-mode" class="liquid-btn" style="width:100%; margin-bottom:15px; background:#4CAF50;">📶 Offline LAN (No Internet)</button>
+            <div style="border-top:1px solid rgba(0,0,0,0.1); margin:15px 0; padding-top:15px;">
+                <p style="margin-bottom:10px; font-weight:600;">Global Rooms (Need Internet) 🌍</p>
+                <div style="display:flex; gap:10px;">
+                    <button id="btn-host-mode" class="liquid-btn" style="flex:1;">Create</button>
+                    <button id="btn-guest-mode" class="liquid-btn" style="flex:1; background:#888;">Join</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content glass">
+            <h2>Who are you?</h2>
+            <input type="text" id="username-input" placeholder="Your nickname" autocomplete="off">
+            <button id="login-btn" class="liquid-btn" style="width: 100%;">Enter Chat</button>
+        </div>
+    </div>
+
+    <!-- WebRTC Setup -->
+    <div id="online-connect-modal" class="modal">
+        <div class="modal-content glass">
+            <h2 style="color:var(--accent);">Cloud Connection</h2>
+            <div id="peer-loading">Initializing Secure Protocol...</div>
+            
+            <div id="host-setup" style="display:none;">
+                <p style="margin-bottom: 20px; font-size:0.9rem;">You are the Room Creator. Your Private Room ID:<br><b id="my-peer-id" style="color:var(--accent); font-size:1.4rem; cursor:pointer;" title="Click to copy">----</b></p>
+                <p style="color:var(--text-light); font-size:0.8rem; margin-bottom:20px;">Guest Users need this ID to connect.</p>
+                <button id="btn-host-enter" class="liquid-btn" style="width:100%;">Enter Room</button>
+            </div>
+            
+            <div id="guest-setup" style="display:none;">
+                <p style="margin-bottom: 10px; font-size:0.9rem;">Join a Creator's Room:</p>
+                <input type="text" id="join-peer-input" placeholder="Paste Creator's ID...">
+                <button id="btn-join-peer" class="liquid-btn" style="width:100%;">Connect to Host</button>
+                <p id="peer-status" style="color:#FF5252; font-size:0.8rem; margin-top:10px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Control Modal (Host Only) -->
+    <div id="theme-modal" class="modal">
+        <div class="modal-content glass">
+            <button class="close-modal" id="close-theme">&times;</button>
+            <h2 style="color:var(--accent);">Room Appearance</h2>
+            <p style="font-size:0.8rem; color:var(--text-light); margin-bottom:15px;">You control the look for everyone in this room.</p>
+            <label style="display:block; text-align:left; margin-bottom:5px; font-weight:600;">Background Color:</label>
+            <input type="color" id="theme-bg" value="#F0F2F5" style="width:100%; height:40px; margin-bottom:15px; border-radius:10px; border:none; padding:0;">
+            <label style="display:block; text-align:left; margin-bottom:5px; font-weight:600;">Accent Color:</label>
+            <input type="color" id="theme-accent" value="#7E91FF" style="width:100%; height:40px; margin-bottom:25px; border-radius:10px; border:none; padding:0;">
+            <button id="apply-theme-btn" class="liquid-btn" style="width: 100%;">Apply Globally</button>
+        </div>
+    </div>
+
+    <!-- App Main -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar glass" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Groups</h2>
+                <button id="room-settings-btn" class="qr-btn" style="display:none; margin-right:5px;" title="Host Controls">🎨</button>
+            </div>
+            <div class="group-list" id="group-list"></div>
+            <div class="new-group-container">
+                <button id="new-group-btn" class="liquid-btn" style="width: 100%;">+ New Group</button>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="main-chat">
+            <div class="chat-header">
+                <button class="mobile-toggle" id="open-sidebar">&#9776;</button>
+                <div class="group-icon" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-left: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);" id="chat-header-icon">G</div>
+                <div class="room-title" id="current-group-title">General</div>
+                <div style="flex:1"></div>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages"></div>
+
+            <div class="chat-input-area">
+                <button id="record-btn" class="liquid-btn voice-btn" title="Record voice note">🎙️</button>
+                <div class="input-wrapper">
+                    <input type="text" id="message-input" class="chat-input" placeholder="Type a message (*italic* **bold** `code`)" autocomplete="off">
+                </div>
+                <input type="file" id="file-input" style="display: none;">
+                <button id="attachment-btn" class="liquid-btn voice-btn" style="color: var(--text-light); width: 44px; height: 44px; margin-right: 5px;" title="Attach File">📎</button>
+                <button id="send-btn" class="liquid-btn" style="padding: 12px 20px;">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        let luminaMode = null; // 'LAN', 'PEER'
+        let appRole = null; // 'HOST', 'GUEST'
+        let currentUser = localStorage.getItem('lumina_username') || '';
+        let currentGroup = 'General';
+        let groups = ['General'];
+        let messages = { 'General': [] };
+        
+        let peer = null;
+        let peerConnections = []; // Host uses this
+        let hostConnection = null; // Guest uses this
+        
+        let currentTheme = { bg: '#F0F2F5', accent: '#7E91FF' };
+
+        // Colors
+        const profileColors = ['#FFCDD2', '#F8BBD0', '#E1BEE7', '#D1C4E9', '#C5CAE9', '#BBDEFB', '#B3E5FC', '#B2EBF2', '#B2DFDB', '#C8E6C9', '#DCEDC8', '#F0F4C3', '#FFECB3', '#FFE082', '#FFCC80', '#FFAB91', '#BCAAA4'];
+        function getColorForString(str) { let h = 0; for(let i=0;i<str.length;i++) h = str.charCodeAt(i) + ((h<<5)-h); return profileColors[Math.abs(h)%profileColors.length]; }
+        function getInitial(name) { return name.charAt(0).toUpperCase(); }
+
+        function applyTheme(bg, accent) {
+            currentTheme = { bg, accent };
+            if(bg) document.body.style.backgroundColor = bg;
+            if(accent) {
+                document.documentElement.style.setProperty('--accent', accent);
+                const styleRules = document.styleSheets[0].cssRules;
+                for(let i=0; i<styleRules.length; i++) {
+                    if(styleRules[i].selectorText === '.group-item.active') {
+                        styleRules[i].style.borderColor = accent;
+                    }
+                }
+            }
+        }
+
+        // Boot Sequence
+        document.getElementById('btn-lan-mode').onclick = () => {
+            luminaMode = 'LAN';
+            document.getElementById('startup-modal').classList.remove('active');
+            document.getElementById('login-modal').classList.add('active');
+        };
+
+        document.getElementById('btn-host-mode').onclick = () => { luminaMode = 'PEER'; initPeerJS('HOST'); };
+        document.getElementById('btn-guest-mode').onclick = () => { luminaMode = 'PEER'; initPeerJS('GUEST'); };
+
+        // Network Handlers
+        function initPeerJS(role) {
+            appRole = role;
+            document.getElementById('startup-modal').classList.remove('active');
+            document.getElementById('online-connect-modal').classList.add('active');
+            
+            peer = new Peer();
+            peer.on('open', (id) => {
+                document.getElementById('peer-loading').style.display = 'none';
+                if (appRole === 'HOST') {
+                    document.getElementById('host-setup').style.display = 'block';
+                    document.getElementById('my-peer-id').textContent = id;
+                    document.getElementById('my-peer-id').onclick = () => { navigator.clipboard.writeText(id); alert("ID Copied!"); };
+                    document.getElementById('btn-host-enter').onclick = () => {
+                        document.getElementById('online-connect-modal').classList.remove('active');
+                        document.getElementById('login-modal').classList.add('active');
+                        document.getElementById('room-settings-btn').style.display = 'block'; 
+                    };
+                } else {
+                    document.getElementById('guest-setup').style.display = 'block';
+                }
+            });
+
+            if (appRole === 'HOST') {
+                peer.on('connection', (conn) => {
+                    peerConnections.push(conn);
+                    conn.on('data', (dataStr) => {
+                        try {
+                            const msg = JSON.parse(dataStr);
+                            if (msg.type === 'join') {
+                                if (!groups.includes(msg.group)) { 
+                                    groups.push(msg.group); renderSidebar(); 
+                                    peerConnections.forEach(c => { if(c.open) c.send(dataStr); }); // relay group
+                                }
+                                return;
+                            }
+                            if(msg.type !== 'theme') {
+                                if (!messages[msg.group]) messages[msg.group] = [];
+                                messages[msg.group].push(msg);
+                                if (currentGroup === msg.group) { appendMessage(msg); scrollToBottom(); }
+                                
+                                // Re-broadcast to all other guests (Router mechanics)
+                                peerConnections.forEach(c => { if (c !== conn && c.open) c.send(dataStr); });
+                            }
+                        } catch(e){}
+                    });
+                    
+                    conn.on('open', () => {
+                        // Send active theme and data state to new joiner
+                        conn.send(JSON.stringify({ type: 'theme', bg: currentTheme.bg, accent: currentTheme.accent }));
+                        // We could stream history here, but keeping it simple for ephemeral chat
+                        groups.forEach(g => { conn.send(JSON.stringify({type: 'join', group: g})); });
+                    });
+                    conn.on('close', () => { peerConnections = peerConnections.filter(c => c !== conn); });
+                });
+            }
+        }
+
+        document.getElementById('btn-join-peer').onclick = () => {
+            const destId = document.getElementById('join-peer-input').value.trim();
+            if (destId && peer) {
+                document.getElementById('peer-status').textContent = 'Dialing...';
+                const conn = peer.connect(destId);
+                hostConnection = conn;
+                
+                conn.on('open', () => {
+                    document.getElementById('online-connect-modal').classList.remove('active');
+                    document.getElementById('login-modal').classList.add('active');
+                });
+                conn.on('data', (dataStr) => {
+                    try {
+                        const msg = JSON.parse(dataStr);
+                        if(msg.type === 'theme') { applyTheme(msg.bg, msg.accent); return; }
+                        if(msg.type === 'join') { 
+                            if(!groups.includes(msg.group)) { groups.push(msg.group); renderSidebar(); }
+                            return; 
+                        }
+                        if (!messages[msg.group]) messages[msg.group] = [];
+                        messages[msg.group].push(msg);
+                        if (currentGroup === msg.group) { appendMessage(msg); scrollToBottom(); }
+                    } catch(e){}
+                });
+                conn.on('close', () => {
+                    alert('The Room Creator has terminated this room.');
+                    window.location.reload(); 
+                });
+            }
+        };
+
+        // Theme Modal (Host)
+        const themeModal = document.getElementById('theme-modal');
+        document.getElementById('room-settings-btn').onclick = () => themeModal.classList.add('active');
+        document.getElementById('close-theme').onclick = () => themeModal.classList.remove('active');
+        document.getElementById('apply-theme-btn').onclick = () => {
+            const bg = document.getElementById('theme-bg').value;
+            const accent = document.getElementById('theme-accent').value;
+            applyTheme(bg, accent);
+            themeModal.classList.remove('active');
+            
+            if(appRole === 'HOST') {
+                const packet = JSON.stringify({ type: 'theme', bg: bg, accent: accent });
+                peerConnections.forEach(c => { if(c.open) c.send(packet); });
+            }
+        };
+
+        document.getElementById('login-btn').onclick = () => {
+            const user = document.getElementById('username-input').value.trim();
+            if (user) { currentUser = user; localStorage.setItem('lumina_username', currentUser); initApp(); }
+        };
+
+        function initApp() {
+            document.getElementById('login-modal').classList.remove('active');
+            const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
+            
+            if (luminaMode === 'LAN') {
+                setInterval(() => {
+                    fetch(baseUrl + '/sync').then(r => r.json()).then(state => {
+                        let ns = false;
+                        state.groups.forEach(g => { if (!groups.includes(g)) { groups.push(g); ns = true; } });
+                        if (ns) renderSidebar();
+
+                        const sx = state.messages.filter(m => m.group === currentGroup);
+                        const lx = (messages[currentGroup] || []).length;
+                        if (sx.length > lx) {
+                            const newMsgs = sx.slice(lx);
+                            newMsgs.forEach(msg => {
+                                if (!messages[currentGroup]) messages[currentGroup] = [];
+                                messages[currentGroup].push(msg);
+                                appendMessage(msg);
+                                scrollToBottom();
+                            });
+                        }
+                    }).catch(()=>{});
+                }, 300); // 300ms optimized incredibly snappy interval latency!
+                fetch(baseUrl + '/send', { method: 'POST', body: JSON.stringify({ type: 'join', group: currentGroup }) }).catch(()=>{});
+            } 
+            renderSidebar(); renderMessages();
+        }
+
+        function scrollToBottom() { const c = document.getElementById('chat-messages'); c.scrollTop = c.scrollHeight; }
+
+        function parseMarkdown(t) {
+            if (!t) return ''; let h = t.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            h = h.replace(/\*\*([^*]+)\*\*/g, '<span class="md-bold">$1</span>');
+            h = h.replace(/\*([^*]+)\*/g, '<span class="md-italic">$1</span>');
+            h = h.replace(/`([^`]+)`/g, '<span class="md-code">$1</span>'); return h;
+        }
+
+        function appendMessage(data) {
+            const isSelf = data.sender === currentUser;
+            const div = document.createElement('div');
+            div.className = `message ${isSelf ? 'self' : 'other'}`;
+            const initColor = getColorForString(data.sender); const init = getInitial(data.sender);
+            
+            let contentHtml = '';
+            if (data.type === 'text') contentHtml = parseMarkdown(data.text);
+            else if (data.type === 'image') contentHtml = `<img src="${data.fileData}" style="max-width:200px; border-radius:10px;">`;
+            else if (data.type === 'audio') contentHtml = `<audio src="${data.fileData}" controls></audio>`;
+            else if (data.type === 'file') contentHtml = `<a href="${data.fileData}" download="${data.fileName}" class="file-message">📎 ${data.fileName}</a>`;
+
+            div.innerHTML = `
+                <div class="message-sender">${!isSelf ? `<span class="profile-initial" style="background:${initColor}">${init}</span> ` : ''}${data.sender}${isSelf ? `<span class="profile-initial" style="background:${initColor}; margin-left: 5px;">${init}</span>` : ''}</div>
+                <div class="message-content">${contentHtml}</div>
+            `;
+            document.getElementById('chat-messages').appendChild(div);
+        }
+
+        function renderMessages() {
+            document.getElementById('chat-messages').innerHTML = '';
+            const hist = messages[currentGroup] || [];
+            hist.forEach(appendMessage); scrollToBottom();
+        }
+
+        function renderSidebar() {
+            const groupList = document.getElementById('group-list');
+            groupList.innerHTML = '';
+            groups.forEach(g => {
+                const div = document.createElement('div');
+                div.className = `group-item ${g === currentGroup ? 'active' : ''}`;
+                div.innerHTML = `<div class="group-icon" style="background: ${getColorForString(g + "group")}">${getInitial(g)}</div><div class="group-name" style="font-weight: 600">${g}</div>`;
+                div.onclick = () => {
+                    currentGroup = g; localStorage.setItem('lumina_last_group', currentGroup);
+                    if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+                    
+                    if (luminaMode === 'LAN') {
+                        const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
+                        fetch(baseUrl + '/send', { method: 'POST', body: JSON.stringify({ type: 'join', group: currentGroup }) });
+                    }
+                    else if (luminaMode === 'PEER') {
+                        if (appRole === 'HOST') peerConnections.forEach(c => { if(c.open) c.send(JSON.stringify({ type: 'join', group: currentGroup })); });
+                        else if (appRole === 'GUEST') hostConnection.send(JSON.stringify({ type: 'join', group: currentGroup }));
+                    }
+                    
+                    renderSidebar(); renderMessages();
+                };
+                groupList.appendChild(div);
+            });
+            document.getElementById('current-group-title').textContent = currentGroup;
+            document.getElementById('chat-header-icon').textContent = getInitial(currentGroup);
+            document.getElementById('chat-header-icon').style.background = getColorForString(currentGroup + "group");
+        }
+
+        function dispatchMessage(msgObj) {
+            msgObj.group = currentGroup;
+            if (!messages[currentGroup]) messages[currentGroup] = [];
+            messages[currentGroup].push(msgObj);
+            appendMessage(msgObj); scrollToBottom();
+
+            if (luminaMode === 'LAN') {
+                const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
+                fetch(baseUrl + '/send', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(msgObj) }).catch(()=>{});
+            } else if (luminaMode === 'PEER') {
+                if(appRole === 'HOST') peerConnections.forEach(c => { if(c.open) c.send(JSON.stringify(msgObj)); });
+                else if(appRole === 'GUEST') hostConnection.send(JSON.stringify(msgObj));
+            }
+        }
+
+        document.getElementById('send-btn').onclick = () => {
+            const input = document.getElementById('message-input');
+            if (input.value.trim()) { dispatchMessage({ sender: currentUser, text: input.value.trim(), type: 'text', time: Date.now() }); input.value = ''; }
+        };
+        document.getElementById('message-input').onkeypress = (e) => { if (e.key === 'Enter') document.getElementById('send-btn').click(); };
+
+        function sendBinaryFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let type = 'file'; if(file.type.startsWith('image/')) type = 'image';
+                dispatchMessage({ sender: currentUser, fileData: e.target.result, fileName: file.name, type: type, time: Date.now() });
+            }; reader.readAsDataURL(file);
+        }
+        document.getElementById('attachment-btn').onclick = () => document.getElementById('file-input').click();
+        document.getElementById('file-input').onchange = (e) => { if(e.target.files.length > 0) sendBinaryFile(e.target.files[0]); };
+
+        const overlay = document.getElementById('drop-overlay');
+        window.addEventListener('dragover', (e) => { e.preventDefault(); overlay.style.display = 'flex'; });
+        overlay.addEventListener('dragleave', (e) => { e.preventDefault(); overlay.style.display = 'none'; });
+        overlay.addEventListener('drop', (e) => { e.preventDefault(); overlay.style.display = 'none'; if(e.dataTransfer.files.length > 0) sendBinaryFile(e.dataTransfer.files[0]); });
+
+        let mediaRecorder; let audioChunks = []; let isRecording = false;
+        const recBtn = document.getElementById('record-btn');
+        recBtn.onclick = async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        const reader = new FileReader(); reader.readAsDataURL(new Blob(audioChunks, { type: 'audio/webm' }));
+                        reader.onloadend = () => { dispatchMessage({ sender: currentUser, fileData: reader.result, type: 'audio', time: Date.now() }); };
+                        audioChunks = []; stream.getTracks().forEach(t => t.stop());
+                    };
+                    mediaRecorder.start(); isRecording = true; recBtn.classList.add('recording');
+                } catch (err) { alert('Microphone access denied.'); }
+            } else { mediaRecorder.stop(); isRecording = false; recBtn.classList.remove('recording'); }
+        };
+
+        document.getElementById('open-sidebar').onclick = () => document.getElementById('sidebar').classList.add('open');
+        const newGrpModal = document.getElementById('new-group-modal');
+        document.getElementById('new-group-btn').onclick = () => newGrpModal.classList.add('active');
+        document.getElementById('close-new-group').onclick = () => newGrpModal.classList.remove('active');
+        document.getElementById('create-group-btn').onclick = () => {
+            const name = document.getElementById('group-name-input').value.trim();
+            if(name && !groups.includes(name)) {
+                groups.push(name);
+                currentGroup = name;
+                renderSidebar(); renderMessages(); newGrpModal.classList.remove('active');
+                
+                if (luminaMode === 'LAN') {
+                    const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
+                    fetch(baseUrl + '/send', { method: 'POST', body: JSON.stringify({ type: 'join', group: name }) });
+                }
+                else if (luminaMode === 'PEER') {
+                    if (appRole === 'HOST') peerConnections.forEach(c => { if(c.open) c.send(JSON.stringify({ type: 'join', group: name })); });
+                    else if (appRole === 'GUEST') hostConnection.send(JSON.stringify({ type: 'join', group: name }));
+                }
+            }
+        };
+
+    </script>
+</body>
+</html>
