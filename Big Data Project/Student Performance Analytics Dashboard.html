@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Student Performance Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#ffffff; --bg-page:#f9f9f9; --surface:#ffffff;
+  --border:#e8e8e8; --border-light:#f0f0f0;
+  --text:#111111; --text-2:#444444; --text-3:#888888;
+  --blue:#2054d4; --blue-light:#eef2fc; --blue-l2:#c5d5f5;
+  --green:#1a7f4b; --green-light:#edf7f2;
+  --orange:#c05a00; --orange-light:#fff3e8;
+  --red:#c0251a; --red-light:#fdf0ef;
+  --radius:8px; --radius-sm:5px;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg-page);color:var(--text);min-height:100vh;font-size:13px;line-height:1.5;}
+
+/* ── LOGIN ── */
+#login-page{min-height:100vh;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+.login-box{width:100%;max-width:380px;}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;}
+.login-logo-mark{width:36px;height:36px;background:var(--text);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;}
+.login-logo-text{font-size:14px;font-weight:600;line-height:1.2;}
+.login-logo-sub{font-size:11px;color:var(--text-3);}
+.login-heading{font-size:22px;font-weight:700;letter-spacing:-.3px;margin-bottom:6px;}
+.login-sub{font-size:13px;color:var(--text-3);margin-bottom:24px;}
+.form-field{margin-bottom:13px;}
+.form-label{display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:5px;letter-spacing:.02em;}
+.form-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--text);background:#fff;outline:none;transition:border-color .15s;font-family:inherit;}
+.form-input:focus{border-color:var(--text);}
+.form-input.error{border-color:var(--red);}
+.error-msg{font-size:11px;color:var(--red);margin-top:4px;display:none;}
+.login-btn{width:100%;padding:10px;background:var(--text);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;margin-top:4px;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;}
+.login-btn:hover{opacity:.85;}
+.login-btn:disabled{opacity:.5;cursor:not-allowed;}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.cred-table{margin-top:16px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+.cred-row{display:grid;grid-template-columns:1fr 1fr 1fr;font-size:11px;border-bottom:1px solid var(--border-light);}
+.cred-row:last-child{border-bottom:none;}
+.cred-row.head{background:var(--bg-page);font-weight:600;color:var(--text-2);}
+.cred-cell{padding:7px 10px;color:var(--text-3);}
+.cred-cell.name{color:var(--text-2);font-weight:500;}
+.cred-fill-btn{background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;padding:7px 10px;text-align:left;font-family:inherit;width:100%;transition:background .1s;}
+.cred-fill-btn:hover{background:var(--blue-light);}
+
+/* ── SKELETON ── */
+#skeleton-page{display:none;background:var(--bg-page);min-height:100vh;}
+.sk-header{background:#fff;border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+.sk-h-left{display:flex;align-items:center;gap:12px;}
+.sk-filters{background:#fff;border-bottom:1px solid var(--border);padding:10px 24px;display:flex;gap:10px;align-items:center;}
+.sk-tabs{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:4px;}
+.sk-tab{height:40px;display:flex;align-items:center;}
+.sk-content{padding:24px;max-width:1200px;margin:0 auto;}
+.sk-kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:24px;}
+.sk-chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.sk{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:5px;}
+@keyframes shimmer{from{background-position:200% 0;}to{background-position:-200% 0;}}
+.sk-badge{width:60px;height:26px;} .sk-title-lg{width:200px;height:15px;} .sk-title-sm{width:140px;height:11px;margin-top:5px;}
+.sk-sdg{width:70px;height:24px;border-radius:12px;} .sk-filter{width:110px;height:28px;border-radius:5px;}
+.sk-tab-item{width:80px;height:14px;margin:13px 8px;}
+.sk-kpi{height:82px;border-radius:8px;border:1px solid #f0f0f0;background:#fff;padding:14px;}
+.sk-kpi-label{width:70px;height:10px;margin-bottom:10px;} .sk-kpi-val{width:50px;height:24px;margin-bottom:6px;} .sk-kpi-sub{width:80px;height:10px;}
+.sk-chart-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px;}
+.sk-chart-ctitle{width:160px;height:13px;margin-bottom:8px;} .sk-chart-cdesc{width:220px;height:10px;margin-bottom:16px;} .sk-chart-body{width:100%;height:180px;border-radius:5px;}
+
+/* ── DASHBOARD ── */
+#dashboard{display:none;}
+.header{background:#fff;border-bottom:1px solid var(--border);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.logo-mark{width:28px;height:28px;background:var(--text);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800;}
+.header-title{font-size:14px;font-weight:600;}
+.header-sub{font-size:11px;color:var(--text-3);}
+.sdg-pill{font-size:11px;font-weight:600;color:var(--blue);background:var(--blue-light);padding:3px 10px;border-radius:20px;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.user-chip{display:flex;align-items:center;gap:7px;background:var(--bg-page);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 4px;}
+.user-av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+.user-name-chip{font-size:11px;font-weight:500;color:var(--text-2);}
+.logout-btn{font-size:11px;color:var(--text-3);background:none;border:1px solid var(--border);padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;font-family:inherit;}
+.logout-btn:hover{color:var(--text);border-color:var(--text);}
+
+.filters-bar{background:#fff;border-bottom:1px solid var(--border);padding:8px 24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.filter-label{font-size:11px;color:var(--text-3);font-weight:500;}
+select{background:#fff;border:1px solid var(--border);color:var(--text);font-size:12px;padding:5px 8px;border-radius:var(--radius-sm);cursor:pointer;outline:none;transition:border-color .15s;font-family:inherit;}
+select:focus{border-color:var(--text);}
+.filter-reset{background:transparent;border:1px solid var(--border);color:var(--text-3);font-size:11px;padding:5px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;font-family:inherit;}
+.filter-reset:hover{border-color:var(--text);color:var(--text);}
+.student-count{margin-left:auto;font-size:11px;color:var(--text-3);background:var(--bg-page);padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-light);}
+.student-count strong{color:var(--text);}
+
+/* filters hidden for students */
+.student-mode .filters-bar{display:none;}
+.student-mode .tab-btn[data-tab="clustering"]{display:none;}
+.student-mode .tab-btn[data-tab="predictions"]{display:none;}
+
+.tabs-nav{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;display:flex;}
+.tab-btn{background:none;border:none;color:var(--text-3);font-size:12px;font-weight:500;padding:11px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;font-family:inherit;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--text);font-weight:600;}
+
+.tab-panel{display:none;padding:24px;max-width:1200px;margin:0 auto;animation:fadeUp .18s ease;}
+.tab-panel.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px;}
+.kpi-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.kpi-label{font-size:10px;color:var(--text-3);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:7px;}
+.kpi-val{font-size:24px;font-weight:700;color:var(--text);letter-spacing:-.5px;line-height:1;}
+.kpi-sub{font-size:10px;color:var(--text-3);margin-top:4px;}
+.kpi-badge{font-size:10px;font-weight:600;margin-top:4px;display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:3px;}
+.kpi-badge.up{background:var(--green-light);color:var(--green);}
+.kpi-badge.down{background:var(--red-light);color:var(--red);}
+.kpi-badge.neutral{background:var(--bg-page);color:var(--text-3);}
+
+/* Charts */
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;}
+.chart-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+.chart-card.wide{grid-column:1/-1;}
+.chart-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.chart-desc{font-size:10px;color:var(--text-3);margin-bottom:14px;}
+.chart-wrap{position:relative;}
+
+/* Cluster cards */
+.cluster-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:18px;}
+.cluster-card{border-radius:var(--radius);padding:14px 16px;border:1px solid;}
+.cluster-card.c0{background:var(--blue-light);border-color:#c5d5f5;}
+.cluster-card.c1{background:var(--green-light);border-color:#b8e4cc;}
+.cluster-card.c2{background:var(--orange-light);border-color:#f5d5b0;}
+.cluster-tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;}
+.c0 .cluster-tag{color:var(--blue);} .c1 .cluster-tag{color:var(--green);} .c2 .cluster-tag{color:var(--orange);}
+.cluster-grade{font-size:30px;font-weight:800;letter-spacing:-1px;margin-bottom:1px;}
+.cluster-n{font-size:10px;color:var(--text-3);margin-bottom:7px;}
+.cluster-traits{font-size:10px;color:var(--text-2);line-height:1.6;}
+
+/* Insights */
+.insights-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:18px;}
+.insight-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;gap:10px;}
+.insight-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.insight-dot.blue{background:var(--blue);} .insight-dot.green{background:var(--green);} .insight-dot.orange{background:var(--orange);} .insight-dot.red{background:var(--red);}
+.insight-title{font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.insight-text{font-size:10px;color:var(--text-3);line-height:1.5;}
+
+/* SDG */
+.sdg-banner{background:var(--text);color:#fff;border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;display:flex;align-items:center;gap:20px;}
+.sdg-num{font-size:56px;font-weight:900;opacity:.15;line-height:1;letter-spacing:-2px;}
+.sdg-info h2{font-size:16px;font-weight:700;margin-bottom:4px;}
+.sdg-info p{font-size:11px;opacity:.7;line-height:1.6;max-width:520px;}
+.sdg-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px;}
+.sdg-metric{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.sdg-m-label{font-size:10px;color:var(--text-3);margin-bottom:5px;}
+.sdg-m-val{font-size:20px;font-weight:700;color:var(--text);}
+.sdg-m-note{font-size:10px;color:var(--text-3);margin-top:3px;line-height:1.4;}
+
+/* Model */
+.model-bar{display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;}
+.m-metric{padding:14px 16px;text-align:center;border-right:1px solid var(--border);}
+.m-metric:last-child{border-right:none;}
+.m-val{font-size:22px;font-weight:700;color:var(--text);}
+.m-label{font-size:10px;color:var(--text-3);margin-top:2px;}
+.feat-bar{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.feat-name{font-size:11px;width:130px;flex-shrink:0;}
+.bar-track{flex:1;background:var(--bg-page);border-radius:3px;height:6px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.bar-fill.pos{background:var(--blue);} .bar-fill.neg{background:var(--red);}
+.feat-val{font-size:10px;width:36px;text-align:right;color:var(--text-3);font-weight:600;}
+
+/* ── MY PROFILE TAB ── */
+.profile-grid{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start;}
+@media(max-width:700px){.profile-grid{grid-template-columns:1fr;}}
+.profile-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;}
+.profile-av{width:64px;height:64px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;margin-bottom:12px;}
+.profile-name{font-size:16px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.profile-roll{font-size:11px;color:var(--text-3);margin-bottom:14px;}
+.profile-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;margin-bottom:16px;}
+.profile-meta{text-align:left;border-top:1px solid var(--border-light);padding-top:14px;}
+.profile-meta-row{display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-bottom:1px solid var(--border-light);}
+.profile-meta-row:last-child{border-bottom:none;}
+.pmr-label{color:var(--text-3);}
+.pmr-val{font-weight:500;color:var(--text-2);}
+.grade-panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+.grade-panel-title{font-size:12px;font-weight:600;margin-bottom:14px;color:var(--text);}
+.grade-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.grade-box{background:var(--bg-page);border:1px solid var(--border-light);border-radius:6px;padding:12px;text-align:center;}
+.grade-box-label{font-size:10px;color:var(--text-3);margin-bottom:4px;}
+.grade-box-val{font-size:22px;font-weight:800;letter-spacing:-.5px;}
+.grade-box-sub{font-size:10px;color:var(--text-3);margin-top:2px;}
+.progress-bar-row{margin-bottom:9px;}
+.pb-label{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;}
+.pb-label span:first-child{color:var(--text-2);}
+.pb-label span:last-child{font-weight:600;color:var(--text);}
+.pb-track{background:var(--bg-page);border-radius:3px;height:7px;overflow:hidden;}
+.pb-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+.status-band{margin-top:14px;padding:10px 14px;border-radius:6px;font-size:11px;line-height:1.5;}
+.status-band strong{display:block;font-size:12px;margin-bottom:3px;}
+.status-band.high{background:var(--green-light);color:var(--green);}
+.status-band.mid{background:var(--blue-light);color:var(--blue);}
+.status-band.low{background:var(--orange-light);color:var(--orange);}
+.status-band.risk{background:var(--red-light);color:var(--red);}
+.comparison-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-top:16px;}
+
+@media(max-width:640px){
+  .tab-btn{font-size:11px;padding:9px 10px;}
+  .tabs-nav{overflow-x:auto;}
+  .sdg-banner{flex-direction:column;gap:10px;}
+  .sdg-num{font-size:36px;}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .model-bar{grid-template-columns:repeat(3,1fr);}
+  .sk-kpi-row{grid-template-columns:repeat(2,1fr);}
+  .sk-chart-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-page">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-mark">SRM</div>
+      <div>
+        <div class="login-logo-text">Analytics Portal</div>
+        <div class="login-logo-sub">CCS334 · Big Data Analytics</div>
+      </div>
+    </div>
+    <div class="login-heading">Sign in</div>
+    <div class="login-sub">Use your student or admin credentials below.</div>
+    <div class="form-field">
+      <label class="form-label" for="inp-user">Username</label>
+      <input class="form-input" id="inp-user" type="text" placeholder="e.g. arjun.s" autocomplete="username"/>
+      <div class="error-msg" id="err-user">Please enter your username.</div>
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="inp-pass">Password</label>
+      <input class="form-input" id="inp-pass" type="password" placeholder="Password" autocomplete="current-password"/>
+      <div class="error-msg" id="err-pass">Please enter your password.</div>
+    </div>
+    <div class="error-msg" id="err-creds" style="display:block;margin-bottom:8px;font-size:12px;"></div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">
+      <div class="spin" id="login-spin"></div>
+      <span id="login-btn-text">Sign in</span>
+    </button>
+    <div style="margin-top:16px;">
+      <div class="cred-table">
+        <div class="cred-row head">
+          <div class="cred-cell">Name</div>
+          <div class="cred-cell">Username</div>
+          <div class="cred-cell">Password</div>
+        </div>
+        <div class="cred-row">
+          <div class="cred-cell name">Admin</div>
+          <div class="cred-cell"><button class="cred-fill-btn" onclick="fillCreds('admin','admin123')">admin</button></div>
+          <div class="cred-cell">admin123</div>
+        </div>
+        <div class="cred-row">
+          <div class="cred-cell name">Arjun S</div>
+          <div class="cred-cell"><button class="cred-fill-btn" onclick="fillCreds('arjun.s','arjun123')">arjun.s</button></div>
+          <div class="cred-cell">arjun123</div>
+        </div>
+        <div class="cred-row">
+          <div class="cred-cell name">Divya R</div>
+          <div class="cred-cell"><button class="cred-fill-btn" onclick="fillCreds('divya.r','divya123')">divya.r</button></div>
+          <div class="cred-cell">divya123</div>
+        </div>
+        <div class="cred-row">
+          <div class="cred-cell name">Karthik M</div>
+          <div class="cred-cell"><button class="cred-fill-btn" onclick="fillCreds('karthik.m','karthik123')">karthik.m</button></div>
+          <div class="cred-cell">karthik123</div>
+        </div>
+        <div class="cred-row">
+          <div class="cred-cell name">Priya N</div>
+          <div class="cred-cell"><button class="cred-fill-btn" onclick="fillCreds('priya.n','priya123')">priya.n</button></div>
+          <div class="cred-cell">priya123</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:center;">Click username to auto-fill</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SKELETON ══ -->
+<div id="skeleton-page">
+  <div class="sk-header">
+    <div class="sk-h-left">
+      <div class="sk sk-badge"></div>
+      <div><div class="sk sk-title-lg"></div><div class="sk sk-title-sm"></div></div>
+    </div>
+    <div class="sk sk-sdg"></div>
+  </div>
+  <div class="sk-filters">
+    <div class="sk sk-filter"></div><div class="sk sk-filter"></div>
+    <div class="sk sk-filter"></div><div class="sk sk-filter" style="width:70px;margin-left:auto"></div>
+  </div>
+  <div class="sk-tabs">
+    <div class="sk-tab"><div class="sk sk-tab-item"></div></div>
+    <div class="sk-tab"><div class="sk sk-tab-item"></div></div>
+    <div class="sk-tab"><div class="sk sk-tab-item"></div></div>
+    <div class="sk-tab"><div class="sk sk-tab-item"></div></div>
+  </div>
+  <div class="sk-content">
+    <div class="sk-kpi-row">
+      <div class="sk-kpi"><div class="sk sk-kpi-label"></div><div class="sk sk-kpi-val"></div><div class="sk sk-kpi-sub"></div></div>
+      <div class="sk-kpi"><div class="sk sk-kpi-label"></div><div class="sk sk-kpi-val"></div><div class="sk sk-kpi-sub"></div></div>
+      <div class="sk-kpi"><div class="sk sk-kpi-label"></div><div class="sk sk-kpi-val"></div><div class="sk sk-kpi-sub"></div></div>
+      <div class="sk-kpi"><div class="sk sk-kpi-label"></div><div class="sk sk-kpi-val"></div><div class="sk sk-kpi-sub"></div></div>
+      <div class="sk-kpi"><div class="sk sk-kpi-label"></div><div class="sk sk-kpi-val"></div><div class="sk sk-kpi-sub"></div></div>
+      <div class="sk-kpi"><div class="sk sk-kpi-label"></div><div class="sk sk-kpi-val"></div><div class="sk sk-kpi-sub"></div></div>
+    </div>
+    <div class="sk-chart-row">
+      <div class="sk-chart-card"><div class="sk sk-chart-ctitle"></div><div class="sk sk-chart-cdesc"></div><div class="sk sk-chart-body"></div></div>
+      <div class="sk-chart-card"><div class="sk sk-chart-ctitle"></div><div class="sk sk-chart-cdesc"></div><div class="sk sk-chart-body"></div></div>
+    </div>
+    <div class="sk-chart-card" style="margin-bottom:16px"><div class="sk sk-chart-ctitle"></div><div class="sk sk-chart-cdesc"></div><div class="sk sk-chart-body" style="height:140px"></div></div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
+<div id="dashboard">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-mark">SP</div>
+      <div>
+        <div class="header-title">Student Performance Analytics</div>
+        <div class="header-sub">CCS334 Big Data Analytics · AY 2026-27</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="sdg-pill">SDG 4.4</div>
+      <div class="user-chip">
+        <div class="user-av" id="user-av">A</div>
+        <span class="user-name-chip" id="user-name-chip">Admin</span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="filters-bar" id="filters-bar">
+    <span class="filter-label">Filter by</span>
+    <select id="f-gender" onchange="applyFilters()">
+      <option value="all">All Genders</option><option value="F">Female</option><option value="M">Male</option>
+    </select>
+    <select id="f-internet" onchange="applyFilters()">
+      <option value="all">Internet: All</option><option value="yes">Has Internet</option><option value="no">No Internet</option>
+    </select>
+    <select id="f-address" onchange="applyFilters()">
+      <option value="all">All Locations</option><option value="U">Urban</option><option value="R">Rural</option>
+    </select>
+    <select id="f-failures" onchange="applyFilters()">
+      <option value="all">All Records</option><option value="0">0 Failures</option><option value="1+">1+ Failures</option>
+    </select>
+    <button class="filter-reset" onclick="resetFilters()">Reset</button>
+    <div class="student-count">Showing <strong id="count-display">395</strong> students</div>
+  </div>
+
+  <div class="tabs-nav" id="tabs-nav">
+    <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview',this)">Overview</button>
+    <button class="tab-btn" data-tab="clustering" onclick="switchTab('clustering',this)">Clustering</button>
+    <button class="tab-btn" data-tab="predictions" onclick="switchTab('predictions',this)">Predictions</button>
+    <button class="tab-btn" data-tab="sdg" onclick="switchTab('sdg',this)">SDG Impact</button>
+    <button class="tab-btn" id="profile-tab-btn" data-tab="profile" onclick="switchTab('profile',this)" style="display:none">My Profile</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div id="tab-overview" class="tab-panel active">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total Students</div><div class="kpi-val" id="kpi-total">395</div><div class="kpi-sub">Math dataset · UCI</div></div>
+      <div class="kpi-card"><div class="kpi-label">Avg Final Grade</div><div class="kpi-val" id="kpi-avg">10.4</div><div class="kpi-sub">G3 out of 20</div></div>
+      <div class="kpi-card"><div class="kpi-label">Pass Rate</div><div class="kpi-val" id="kpi-pass">67%</div><span class="kpi-badge up">G3 ≥ 10</span></div>
+      <div class="kpi-card"><div class="kpi-label">At-Risk</div><div class="kpi-val" id="kpi-atrisk">87</div><span class="kpi-badge down">22% of cohort</span></div>
+      <div class="kpi-card"><div class="kpi-label">Avg Study Time</div><div class="kpi-val" id="kpi-study">2.0</div><div class="kpi-sub">Scale 1–4</div></div>
+      <div class="kpi-card"><div class="kpi-label">Internet Access</div><div class="kpi-val" id="kpi-internet">77%</div><div class="kpi-sub">Have home access</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-title">Final Grade Distribution</div><div class="chart-desc">Frequency of G3 grades across all students</div><div class="chart-wrap"><canvas id="chart-hist" height="210"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Study Time vs Final Grade</div><div class="chart-desc">Average G3 per weekly study time band</div><div class="chart-wrap"><canvas id="chart-study" height="210"></canvas></div></div>
+      <div class="chart-card wide"><div class="chart-title">Grade Progression G1 → G2 → G3</div><div class="chart-desc">Average grades across three periods, split by final pass/fail outcome</div><div class="chart-wrap"><canvas id="chart-progress" height="160"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- CLUSTERING -->
+  <div id="tab-clustering" class="tab-panel">
+    <div class="cluster-grid">
+      <div class="cluster-card c0"><div class="cluster-tag">Cluster 0 · High Performers</div><div class="cluster-grade" style="color:var(--blue)" id="cl-g0">15.2</div><div class="cluster-n" id="cl-n0">~136 students (34%)</div><div class="cluster-traits">Low failures · High study time · Internet access · Urban</div></div>
+      <div class="cluster-card c1"><div class="cluster-tag">Cluster 1 · Average Performers</div><div class="cluster-grade" style="color:var(--green)" id="cl-g1">10.8</div><div class="cluster-n" id="cl-n1">~172 students (44%)</div><div class="cluster-traits">Mixed habits · Moderate absences · Some failures</div></div>
+      <div class="cluster-card c2"><div class="cluster-tag">Cluster 2 · At-Risk</div><div class="cluster-grade" style="color:var(--orange)" id="cl-g2">6.4</div><div class="cluster-n" id="cl-n2">~87 students (22%)</div><div class="cluster-traits">High failures · Low study time · Rural · No internet</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-title">Cluster Distribution</div><div class="chart-desc">Student count per cluster</div><div class="chart-wrap"><canvas id="chart-cluster-dist" height="210"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Failures vs Average Grade</div><div class="chart-desc">Cluster separation on two key dimensions</div><div class="chart-wrap"><canvas id="chart-cluster-scatter" height="210"></canvas></div></div>
+      <div class="chart-card wide"><div class="chart-title">Pass Rate by Internet Access & Location</div><div class="chart-desc">Equity gap — 11pp difference between connected and unconnected students</div><div class="chart-wrap"><canvas id="chart-equity" height="160"></canvas></div></div>
+    </div>
+    <div class="insights-grid">
+      <div class="insight-card"><div class="insight-dot blue"></div><div><div class="insight-title">Early signals dominate</div><div class="insight-text">G1→G2 momentum correctly predicts final cluster in 81% of cases.</div></div></div>
+      <div class="insight-card"><div class="insight-dot orange"></div><div><div class="insight-title">At-risk identifiable by mid-term</div><div class="insight-text">Cluster 2 shows low G1 + ≥1 failure before finals.</div></div></div>
+      <div class="insight-card"><div class="insight-dot green"></div><div><div class="insight-title">Internet access is a divider</div><div class="insight-text">72% pass with internet vs 61% without — 11pt equity gap.</div></div></div>
+      <div class="insight-card"><div class="insight-dot red"></div><div><div class="insight-title">Parental education correlates</div><div class="insight-text">Mother at edu level 4 → +2.1 points above cohort mean.</div></div></div>
+    </div>
+  </div>
+
+  <!-- PREDICTIONS -->
+  <div id="tab-predictions" class="tab-panel">
+    <div class="model-bar">
+      <div class="m-metric"><div class="m-val">87.3%</div><div class="m-label">Accuracy</div></div>
+      <div class="m-metric"><div class="m-val">0.89</div><div class="m-label">Precision</div></div>
+      <div class="m-metric"><div class="m-val">0.86</div><div class="m-label">Recall</div></div>
+      <div class="m-metric"><div class="m-val">0.87</div><div class="m-label">F1-Score</div></div>
+      <div class="m-metric"><div class="m-val">80/20</div><div class="m-label">Train/Test</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-title">Feature Correlation with G3</div><div class="chart-desc">Pearson r — positive helps grade, negative hurts</div><div class="chart-wrap" style="padding:4px 0" id="feature-bars"></div></div>
+      <div class="chart-card"><div class="chart-title">Parent Education Impact</div><div class="chart-desc">Average G3 by mother's education level</div><div class="chart-wrap"><canvas id="chart-medu" height="210"></canvas></div></div>
+      <div class="chart-card wide"><div class="chart-title">Absences vs Final Grade</div><div class="chart-desc">Average G3 by absence band</div><div class="chart-wrap"><canvas id="chart-absences" height="160"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- SDG -->
+  <div id="tab-sdg" class="tab-panel">
+    <div class="sdg-banner"><div class="sdg-num">4</div><div class="sdg-info"><h2>SDG 4 — Quality Education</h2><p><strong>Target 4.4:</strong> By 2030, substantially increase the number of youth and adults who have relevant skills, including technical and vocational skills, for employment and entrepreneurship.</p></div></div>
+    <div class="sdg-metrics">
+      <div class="sdg-metric"><div class="sdg-m-label">At-risk students</div><div class="sdg-m-val" id="sdg-atrisk">22%</div><div class="sdg-m-note">Flaggable before final exams using G1 + failure count</div></div>
+      <div class="sdg-metric"><div class="sdg-m-label">Internet equity gap</div><div class="sdg-m-val">11 pts</div><div class="sdg-m-note">Pass rate diff: connected vs unconnected</div></div>
+      <div class="sdg-metric"><div class="sdg-m-label">Parental edu grade lift</div><div class="sdg-m-val">+2.1</div><div class="sdg-m-note">Avg G3 points when mother holds higher edu</div></div>
+      <div class="sdg-metric"><div class="sdg-m-label">Intervention window</div><div class="sdg-m-val">G1 → G2</div><div class="sdg-m-note">Highest predictive accuracy for targeted support</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-title">Pass Rate by Internet Access</div><div class="chart-desc">Digital divide in outcomes</div><div class="chart-wrap"><canvas id="chart-sdg-internet" height="210"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">At-Risk Students by Location</div><div class="chart-desc">Rural vs urban Cluster 2 distribution</div><div class="chart-wrap"><canvas id="chart-sdg-location" height="210"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- MY PROFILE -->
+  <div id="tab-profile" class="tab-panel">
+    <div class="profile-grid">
+      <div>
+        <div class="profile-card">
+          <div class="profile-av" id="pav">A</div>
+          <div class="profile-name" id="p-name">—</div>
+          <div class="profile-roll" id="p-roll">—</div>
+          <div class="profile-tag" id="p-tag">—</div>
+          <div class="profile-meta">
+            <div class="profile-meta-row"><span class="pmr-label">Department</span><span class="pmr-val">AI & Data Science</span></div>
+            <div class="profile-meta-row"><span class="pmr-label">Semester</span><span class="pmr-val">V (AY 2026-27)</span></div>
+            <div class="profile-meta-row"><span class="pmr-label">Gender</span><span class="pmr-val" id="p-gender">—</span></div>
+            <div class="profile-meta-row"><span class="pmr-label">Address</span><span class="pmr-val" id="p-address">—</span></div>
+            <div class="profile-meta-row"><span class="pmr-label">Internet Access</span><span class="pmr-val" id="p-internet">—</span></div>
+            <div class="profile-meta-row"><span class="pmr-label">Study Time</span><span class="pmr-val" id="p-studytime">—</span></div>
+            <div class="profile-meta-row"><span class="pmr-label">Past Failures</span><span class="pmr-val" id="p-failures">—</span></div>
+            <div class="profile-meta-row"><span class="pmr-label">Absences</span><span class="pmr-val" id="p-absences">—</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="grade-panel">
+          <div class="grade-panel-title">Academic Performance</div>
+          <div class="grade-row">
+            <div class="grade-box"><div class="grade-box-label">Period 1 (G1)</div><div class="grade-box-val" id="pg1">—</div><div class="grade-box-sub">out of 20</div></div>
+            <div class="grade-box"><div class="grade-box-label">Period 2 (G2)</div><div class="grade-box-val" id="pg2">—</div><div class="grade-box-sub">out of 20</div></div>
+            <div class="grade-box" id="g3-box"><div class="grade-box-label">Final Grade (G3)</div><div class="grade-box-val" id="pg3">—</div><div class="grade-box-sub">out of 20</div></div>
+          </div>
+          <div class="progress-bar-row"><div class="pb-label"><span>G1 Score</span><span id="pb-g1-val">—</span></div><div class="pb-track"><div class="pb-fill" id="pb-g1" style="width:0%;background:var(--blue)"></div></div></div>
+          <div class="progress-bar-row"><div class="pb-label"><span>G2 Score</span><span id="pb-g2-val">—</span></div><div class="pb-track"><div class="pb-fill" id="pb-g2" style="width:0%;background:var(--blue)"></div></div></div>
+          <div class="progress-bar-row"><div class="pb-label"><span>G3 Score</span><span id="pb-g3-val">—</span></div><div class="pb-track"><div class="pb-fill" id="pb-g3" style="width:0%;background:var(--blue)"></div></div></div>
+          <div class="status-band" id="p-status-band">—</div>
+        </div>
+        <div class="comparison-card">
+          <div class="chart-title" style="margin-bottom:3px">Your Grade vs Cohort Average</div>
+          <div class="chart-desc">How your G1, G2, G3 compare to the class average</div>
+          <canvas id="chart-profile-compare" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /dashboard -->
+
+<script>
+/* ══ STUDENT DATA ══ */
+const STUDENT_PROFILES = {
+  'arjun.s': {
+    name:'Arjun Selvam', roll:'21CS501', color:'#2054d4',
+    sex:'M', internet:'yes', address:'Urban', studytime:3, failures:0, absences:4, medu:3,
+    g1:14, g2:15, g3:16,
+    cluster:'High Performer', clusterClass:'high'
+  },
+  'divya.r': {
+    name:'Divya Rajan', roll:'21CS502', color:'#1a7f4b',
+    sex:'F', internet:'yes', address:'Urban', studytime:2, failures:0, absences:8, medu:2,
+    g1:11, g2:12, g3:11,
+    cluster:'Average Performer', clusterClass:'mid'
+  },
+  'karthik.m': {
+    name:'Karthik Muthu', roll:'21CS503', color:'#c05a00',
+    sex:'M', internet:'no', address:'Rural', studytime:1, failures:2, absences:18, medu:1,
+    g1:7, g2:6, g3:5,
+    cluster:'At-Risk', clusterClass:'risk'
+  },
+  'priya.n': {
+    name:'Priya Nair', roll:'21CS504', color:'#7c3aed',
+    sex:'F', internet:'yes', address:'Urban', studytime:2, failures:1, absences:12, medu:2,
+    g1:9, g2:10, g3:10,
+    cluster:'Average Performer', clusterClass:'mid'
+  }
+};
+
+const USERS = {
+  admin:    { pass:'admin123', role:'admin' },
+  'arjun.s':  { pass:'arjun123', role:'student' },
+  'divya.r':  { pass:'divya123', role:'student' },
+  'karthik.m':{ pass:'karthik123', role:'student' },
+  'priya.n':  { pass:'priya123', role:'student' }
+};
+
+let currentUser = null;
+
+/* ── helpers ── */
+function fillCreds(u,p){
+  document.getElementById('inp-user').value=u;
+  document.getElementById('inp-pass').value=p;
+  document.getElementById('err-creds').style.display='none';
+  document.querySelectorAll('.form-input').forEach(i=>i.classList.remove('error'));
+}
+
+/* ── login ── */
+function doLogin(){
+  const u=document.getElementById('inp-user').value.trim();
+  const p=document.getElementById('inp-pass').value;
+  let ok=true;
+  document.querySelectorAll('.form-input').forEach(i=>i.classList.remove('error'));
+  document.querySelectorAll('.error-msg').forEach(e=>e.style.display='none');
+  if(!u){document.getElementById('inp-user').classList.add('error');document.getElementById('err-user').style.display='block';ok=false;}
+  if(!p){document.getElementById('inp-pass').classList.add('error');document.getElementById('err-pass').style.display='block';ok=false;}
+  if(!ok)return;
+  const btn=document.getElementById('login-btn'),spin=document.getElementById('login-spin'),txt=document.getElementById('login-btn-text');
+  btn.disabled=true;spin.style.display='block';txt.textContent='Signing in…';
+  setTimeout(()=>{
+    if(USERS[u]&&USERS[u].pass===p){
+      currentUser={username:u, ...USERS[u]};
+      document.getElementById('login-page').style.display='none';
+      showSkeleton();
+    } else {
+      btn.disabled=false;spin.style.display='none';txt.textContent='Sign in';
+      const e=document.getElementById('err-creds');
+      e.textContent='Incorrect username or password.';e.style.display='block';
+      document.querySelectorAll('.form-input').forEach(i=>i.classList.add('error'));
+    }
+  },900);
+}
+
+function showSkeleton(){
+  document.getElementById('skeleton-page').style.display='block';
+  setTimeout(()=>{
+    document.getElementById('skeleton-page').style.display='none';
+    initDashboard();
+  },1800);
+}
+
+function initDashboard(){
+  const dash=document.getElementById('dashboard');
+  dash.style.display='block';
+  const isStudent=currentUser.role==='student';
+  const u=currentUser.username;
+  const profile=isStudent?STUDENT_PROFILES[u]:null;
+
+  /* header chip */
+  const av=document.getElementById('user-av');
+  const nc=document.getElementById('user-name-chip');
+  if(profile){ av.textContent=profile.name[0]; av.style.background=profile.color; nc.textContent=profile.name; }
+  else { av.textContent='A'; av.style.background='#111'; nc.textContent='Admin'; }
+
+  /* filters + tabs visibility */
+  document.getElementById('filters-bar').style.display=isStudent?'none':'flex';
+  document.querySelectorAll('.tab-btn[data-tab="clustering"]').forEach(b=>b.style.display=isStudent?'none':'');
+  document.querySelectorAll('.tab-btn[data-tab="predictions"]').forEach(b=>b.style.display=isStudent?'none':'');
+  document.getElementById('profile-tab-btn').style.display=isStudent?'':'none';
+
+  if(isStudent){
+    /* switch to profile tab for student */
+    switchTab('overview', document.querySelector('.tab-btn[data-tab="overview"]'));
+    renderProfile(profile);
+  }
+
+  resetFilters(true);
+}
+
+function renderProfile(p){
+  /* avatar */
+  document.getElementById('pav').textContent=p.name[0];
+  document.getElementById('pav').style.background=p.color;
+  document.getElementById('p-name').textContent=p.name;
+  document.getElementById('p-roll').textContent=p.roll+' · AI & Data Science';
+  /* cluster tag */
+  const tag=document.getElementById('p-tag');
+  tag.textContent=p.cluster;
+  const cls={high:'background:var(--green-light);color:var(--green)',mid:'background:var(--blue-light);color:var(--blue)',risk:'background:var(--red-light);color:var(--red)'};
+  tag.style.cssText=cls[p.clusterClass];
+  /* meta */
+  document.getElementById('p-gender').textContent=p.sex==='M'?'Male':'Female';
+  document.getElementById('p-address').textContent=p.address;
+  document.getElementById('p-internet').textContent=p.internet==='yes'?'Yes':'No';
+  const stMap={1:'< 2 hrs/week',2:'2–5 hrs/week',3:'5–10 hrs/week',4:'> 10 hrs/week'};
+  document.getElementById('p-studytime').textContent=stMap[p.studytime];
+  document.getElementById('p-failures').textContent=p.failures;
+  document.getElementById('p-absences').textContent=p.absences+' days';
+  /* grades */
+  ['g1','g2','g3'].forEach(k=>{
+    document.getElementById('p'+k).textContent=p[k];
+    document.getElementById('pb-'+k).style.width=(p[k]/20*100)+'%';
+    document.getElementById('pb-'+k+'-val').textContent=p[k]+'/20';
+    const col=p[k]>=12?'var(--green)':p[k]>=8?'var(--blue)':'var(--red)';
+    document.getElementById('pb-'+k).style.background=col;
+    document.getElementById('p'+k).style.color=col;
+  });
+  /* status band */
+  const sb=document.getElementById('p-status-band');
+  const msgs={
+    high:{cls:'high',title:'Excellent Standing',msg:'You are in the top performance cluster. Keep up your study habits and maintain consistency.'},
+    mid:{cls:'mid',title:'Progressing Well',msg:'You are on track for a passing grade. Increasing study time by one band could push you into the top cluster.'},
+    risk:{cls:'risk',title:'Needs Attention',msg:'Your current grades put you in the at-risk category. Speak to your faculty advisor and increase study hours.'}
+  };
+  const m=msgs[p.clusterClass];
+  sb.className='status-band '+m.cls;
+  sb.innerHTML=`<strong>${m.title}</strong>${m.msg}`;
+  /* comparison chart */
+  const cohortG1=10.2,cohortG2=10.8,cohortG3=10.4;
+  if(charts['chart-profile-compare'])charts['chart-profile-compare'].destroy();
+  const ctx=document.getElementById('chart-profile-compare');
+  charts['chart-profile-compare']=new Chart(ctx,{type:'bar',data:{labels:['G1','G2','G3'],datasets:[{label:'Your Score',data:[p.g1,p.g2,p.g3],backgroundColor:p.color+'cc',borderRadius:4,borderSkipped:false},{label:'Cohort Avg',data:[cohortG1,cohortG2,cohortG3],backgroundColor:'#e0e0e0',borderRadius:4,borderSkipped:false}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},scales:{y:{min:0,max:20,grid:{color:'#f5f5f5'},title:{display:true,text:'Grade'}},x:{grid:{display:false}}}}});
+}
+
+function doLogout(){
+  currentUser=null;
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('login-page').style.display='flex';
+  document.getElementById('inp-user').value='';document.getElementById('inp-pass').value='';
+  document.getElementById('err-creds').style.display='none';
+  document.getElementById('login-btn').disabled=false;
+  document.getElementById('login-spin').style.display='none';
+  document.getElementById('login-btn-text').textContent='Sign in';
+}
+
+document.getElementById('inp-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('inp-user').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+/* ══ COHORT DATA ══ */
+const FULL_DATA = Array.from({length:395},(_,i)=>{
+  const sx=i%2===0?'F':'M',inet=i%5!==0?'yes':'no',addr=i%4!==0?'U':'R';
+  const medu=[0,1,2,3,4][i%5],studytime=[1,2,2,3,4][i%5];
+  const failures=i%7===0?2:i%11===0?1:0,absences=i%30;
+  let base=8+studytime*1.2-failures*1.8+(inet==='yes'?1.1:0)+medu*0.4;
+  base+=(i%3===0?1.5:i%3===1?-1:0);
+  const g1=Math.max(0,Math.min(20,Math.round(base-1+(i%4)*0.5)));
+  const g2=Math.max(0,Math.min(20,Math.round(g1+(i%3)*0.5-0.5)));
+  const g3=Math.max(0,Math.min(20,Math.round(g2+(i%5)*0.3-0.5)));
+  return{sex:sx,internet:inet,address:addr,g1,g2,g3,studytime,failures,absences,medu};
+});
+
+let filtered=[...FULL_DATA];
+let charts={};
+
+/* ══ FILTERS ══ */
+function applyFilters(){
+  const gn=document.getElementById('f-gender').value,inet=document.getElementById('f-internet').value,
+    addr=document.getElementById('f-address').value,fail=document.getElementById('f-failures').value;
+  filtered=FULL_DATA.filter(s=>(gn==='all'||s.sex===gn)&&(inet==='all'||s.internet===inet)&&(addr==='all'||s.address===addr)&&(fail==='all'||(fail==='0'?s.failures===0:s.failures>=1)));
+  document.getElementById('count-display').textContent=filtered.length;
+  updateKPIs();updateAllCharts();
+}
+function resetFilters(silent){
+  ['f-gender','f-internet','f-address','f-failures'].forEach(id=>document.getElementById(id).value='all');
+  filtered=[...FULL_DATA];
+  document.getElementById('count-display').textContent=filtered.length;
+  updateKPIs();updateAllCharts();
+}
+
+/* ══ KPIs ══ */
+function updateKPIs(){
+  const n=filtered.length;if(!n)return;
+  document.getElementById('kpi-total').textContent=n;
+  document.getElementById('kpi-avg').textContent=(filtered.reduce((a,s)=>a+s.g3,0)/n).toFixed(1);
+  const pass=Math.round(filtered.filter(s=>s.g3>=10).length/n*100);
+  document.getElementById('kpi-pass').textContent=pass+'%';
+  const ar=filtered.filter(s=>s.g3<7||s.failures>=2).length;
+  document.getElementById('kpi-atrisk').textContent=ar;
+  document.getElementById('kpi-study').textContent=(filtered.reduce((a,s)=>a+s.studytime,0)/n).toFixed(1);
+  document.getElementById('kpi-internet').textContent=Math.round(filtered.filter(s=>s.internet==='yes').length/n*100)+'%';
+  const c0=filtered.filter(s=>s.g3>=13).length,c2=ar,c1=n-c0-c2;
+  document.getElementById('cl-n0').textContent=`~${c0} students (${Math.round(c0/n*100)}%)`;
+  document.getElementById('cl-n1').textContent=`~${c1} students (${Math.round(c1/n*100)}%)`;
+  document.getElementById('cl-n2').textContent=`~${c2} students (${Math.round(c2/n*100)}%)`;
+  document.getElementById('sdg-atrisk').textContent=Math.round(c2/n*100)+'%';
+}
+
+/* ══ CHARTS ══ */
+const C={blue:'#2054d4',blueA:'#2054d422',blueL:'#93b4f0',muted:'#d0d0d0',green:'#1a7f4b',orange:'#c05a00',red:'#c0251a'};
+Chart.defaults.font={family:"'Inter',-apple-system,sans-serif",size:11};
+Chart.defaults.color='#888';
+function mk(id,cfg){if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(!el)return;charts[id]=new Chart(el,cfg);}
+function gAvg(arr,key){return arr.length?(arr.reduce((a,s)=>a+s[key],0)/arr.length).toFixed(1):0;}
+
+function updateAllCharts(){
+  drawHist();drawStudy();drawProgress();
+  drawClusterDist();drawClusterScatter();drawEquity();
+  drawFeatBars();drawMedu();drawAbsences();
+  drawSdgInternet();drawSdgLocation();
+}
+
+function drawHist(){const bins=Array(21).fill(0);filtered.forEach(s=>bins[s.g3]++);mk('chart-hist',{type:'bar',data:{labels:bins.map((_,i)=>i),datasets:[{data:bins,backgroundColor:bins.map((_,i)=>i>=10?C.blue:C.muted),borderRadius:3,borderSkipped:false}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw} students`}}},scales:{x:{grid:{display:false},title:{display:true,text:'Grade'}},y:{grid:{color:'#f5f5f5'},title:{display:true,text:'Count'}}}}});}
+function drawStudy(){const avgs=[1,2,3,4].map(b=>{const g=filtered.filter(s=>s.studytime===b);return g.length?(g.reduce((a,s)=>a+s.g3,0)/g.length).toFixed(1):0});mk('chart-study',{type:'bar',data:{labels:['< 2 hrs','2–5 hrs','5–10 hrs','> 10 hrs'],datasets:[{data:avgs,backgroundColor:[C.muted,C.blueL,C.blue,'#1340a8'],borderRadius:4,borderSkipped:false}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` Avg G3: ${c.raw}`}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f5f5f5'},min:0,max:20,title:{display:true,text:'Avg G3'}}}}});}
+function drawProgress(){const pass=filtered.filter(s=>s.g3>=10),fail=filtered.filter(s=>s.g3<10);mk('chart-progress',{type:'line',data:{labels:['G1','G2','G3'],datasets:[{label:'Passed',data:[gAvg(pass,'g1'),gAvg(pass,'g2'),gAvg(pass,'g3')],borderColor:C.blue,backgroundColor:C.blueA,tension:.3,fill:true,pointRadius:5,pointBackgroundColor:C.blue},{label:'Did Not Pass',data:[gAvg(fail,'g1'),gAvg(fail,'g2'),gAvg(fail,'g3')],borderColor:C.muted,backgroundColor:'#d0d0d022',tension:.3,fill:true,pointRadius:5,pointBackgroundColor:C.muted}]},options:{plugins:{legend:{display:true,position:'bottom'}},scales:{y:{min:0,max:20,grid:{color:'#f5f5f5'},title:{display:true,text:'Avg Grade'}},x:{grid:{display:false}}}}});}
+function drawClusterDist(){const c0=filtered.filter(s=>s.g3>=13).length,c2=filtered.filter(s=>s.g3<7||s.failures>=2).length,c1=filtered.length-c0-c2;mk('chart-cluster-dist',{type:'doughnut',data:{labels:['High','Average','At-Risk'],datasets:[{data:[c0,c1,c2],backgroundColor:[C.blue,'#86efac',C.orange],borderWidth:3,borderColor:'#fff'}]},options:{plugins:{legend:{position:'bottom'}},cutout:'58%'}});}
+function drawClusterScatter(){const pts=(f)=>filtered.filter(f).map(s=>({x:s.failures,y:parseFloat(((s.g1+s.g2+s.g3)/3).toFixed(1))}));mk('chart-cluster-scatter',{type:'scatter',data:{datasets:[{label:'High',data:pts(s=>s.g3>=13).slice(0,60),backgroundColor:C.blue+'88',pointRadius:4},{label:'Average',data:pts(s=>s.g3>=7&&s.g3<13&&s.failures<2).slice(0,60),backgroundColor:C.green+'88',pointRadius:4},{label:'At-Risk',data:pts(s=>s.g3<7||s.failures>=2).slice(0,40),backgroundColor:C.orange+'bb',pointRadius:4}]},options:{plugins:{legend:{position:'bottom'}},scales:{x:{title:{display:true,text:'Past Failures'},grid:{color:'#f5f5f5'}},y:{title:{display:true,text:'Avg Grade'},min:0,max:20,grid:{color:'#f5f5f5'}}}}});}
+function drawEquity(){const grp=[{l:'Internet: Yes',f:s=>s.internet==='yes'},{l:'Internet: No',f:s=>s.internet==='no'},{l:'Urban',f:s=>s.address==='U'},{l:'Rural',f:s=>s.address==='R'}];const vals=grp.map(g=>{const a=filtered.filter(g.f);return a.length?Math.round(a.filter(s=>s.g3>=10).length/a.length*100):0});mk('chart-equity',{type:'bar',data:{labels:grp.map(g=>g.l),datasets:[{data:vals,backgroundColor:[C.blue,C.blueL,C.green,'#86efac'],borderRadius:4,borderSkipped:false}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw}% pass rate`}}},scales:{y:{min:0,max:100,title:{display:true,text:'Pass Rate (%)'},grid:{color:'#f5f5f5'}},x:{grid:{display:false}}}}});}
+function drawFeatBars(){const feats=[{n:"G2 (Period 2)",r:.90,d:'pos'},{n:"G1 (Period 1)",r:.80,d:'pos'},{n:"Mother's Edu",r:.22,d:'pos'},{n:"Study Time",r:.10,d:'pos'},{n:"Failures",r:-.36,d:'neg'},{n:"Go Out",r:-.13,d:'neg'},{n:"Absences",r:-.03,d:'neg'}];document.getElementById('feature-bars').innerHTML=feats.map(f=>`<div class="feat-bar"><div class="feat-name">${f.n}</div><div class="bar-track"><div class="bar-fill ${f.d}" style="width:${Math.abs(f.r)*100}%"></div></div><div class="feat-val" style="color:${f.d==='pos'?C.blue:C.red}">${f.r>0?'+':''}${f.r}</div></div>`).join('');}
+function drawMedu(){const avgs=[0,1,2,3,4].map(l=>{const g=filtered.filter(s=>s.medu===l);return g.length?(g.reduce((a,s)=>a+s.g3,0)/g.length).toFixed(1):null});mk('chart-medu',{type:'bar',data:{labels:['None','Primary','5th–9th','Secondary','Higher'],datasets:[{data:avgs,backgroundColor:[0,1,2,3,4].map(i=>`rgba(32,84,212,${0.25+i*.19})`),borderRadius:4,borderSkipped:false}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` Avg G3: ${c.raw}`}}},scales:{x:{grid:{display:false}},y:{min:0,max:20,grid:{color:'#f5f5f5'},title:{display:true,text:'Avg G3'}}}}});}
+function drawAbsences(){const bands=[{l:'0',r:0,e:0},{l:'1–5',r:1,e:5},{l:'6–10',r:6,e:10},{l:'11–20',r:11,e:20},{l:'21+',r:21,e:999}];const avgs=bands.map(b=>{const g=filtered.filter(s=>s.absences>=b.r&&s.absences<=b.e);return g.length?(g.reduce((a,s)=>a+s.g3,0)/g.length).toFixed(1):0});mk('chart-absences',{type:'line',data:{labels:bands.map(b=>b.l),datasets:[{data:avgs,borderColor:C.blue,backgroundColor:C.blueA,tension:.3,fill:true,pointRadius:5,pointBackgroundColor:C.blue}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` Avg G3: ${c.raw}`}}},scales:{x:{title:{display:true,text:'Absences'},grid:{display:false}},y:{min:0,max:20,grid:{color:'#f5f5f5'},title:{display:true,text:'Avg G3'}}}}});}
+function drawSdgInternet(){const yes=filtered.filter(s=>s.internet==='yes'),no=filtered.filter(s=>s.internet==='no');mk('chart-sdg-internet',{type:'bar',data:{labels:['Has Internet','No Internet'],datasets:[{data:[yes.length?Math.round(yes.filter(s=>s.g3>=10).length/yes.length*100):0,no.length?Math.round(no.filter(s=>s.g3>=10).length/no.length*100):0],backgroundColor:[C.blue,C.muted],borderRadius:6,borderSkipped:false}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw}% pass rate`}}},scales:{y:{min:0,max:100,title:{display:true,text:'Pass Rate (%)'},grid:{color:'#f5f5f5'}},x:{grid:{display:false}}}}});}
+function drawSdgLocation(){const u=filtered.filter(s=>s.address==='U'),r=filtered.filter(s=>s.address==='R');mk('chart-sdg-location',{type:'bar',data:{labels:['Urban','Rural'],datasets:[{data:[u.length?Math.round(u.filter(s=>s.g3<7||s.failures>=2).length/u.length*100):0,r.length?Math.round(r.filter(s=>s.g3<7||s.failures>=2).length/r.length*100):0],backgroundColor:[C.blueL,C.orange],borderRadius:6,borderSkipped:false}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw}% at-risk`}}},scales:{y:{min:0,max:60,title:{display:true,text:'At-Risk (%)'},grid:{color:'#f5f5f5'}},x:{grid:{display:false}}}}});}
+
+/* ══ TABS ══ */
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  setTimeout(()=>{
+    updateAllCharts();
+    if(id==='profile'&&currentUser&&currentUser.role==='student'){
+      renderProfile(STUDENT_PROFILES[currentUser.username]);
+    }
+  },60);
+}
+</script>
+</body>
+</html>
