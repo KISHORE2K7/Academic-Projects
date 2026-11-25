@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NetGuard IDS — Admin Console</title>
+<style>
+:root{
+  --bg:#f8f8f6;--bg2:#ffffff;--bg3:#f2f2f0;--bg4:#ececea;
+  --border:#e4e4e0;--border2:#d0d0cc;--border3:#b8b8b4;
+  --text:#111110;--text2:#555552;--text3:#999994;--text4:#c4c4c0;
+  --white:#ffffff;
+  --red:#c0392b;--red-bg:#fef2f2;--red-border:#fca5a5;
+  --yellow:#92620a;--yellow-bg:#fffbeb;--yellow-border:#fcd34d;
+  --green:#166534;--green-bg:#f0fdf4;--green-border:#86efac;
+  --blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#93c5fd;
+  --panel:268px;
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+  --ease-io:cubic-bezier(0.77,0,0.175,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-size:13px}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit}
+
+/* ── LOGIN ───────────────────────────────────────────────────────────────── */
+#login-screen{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity 380ms var(--ease-out),transform 380ms var(--ease-out)}
+#login-screen.hidden{opacity:0;transform:scale(0.98);pointer-events:none}
+.login-box{width:100%;max-width:360px;padding:0 20px}
+.login-brand{display:flex;align-items:center;gap:9px;margin-bottom:36px}
+.login-mark{width:34px;height:34px;background:var(--text);display:grid;place-items:center;flex-shrink:0}
+.login-mark svg{width:18px;height:18px}
+.login-brand-name{font-size:15px;font-weight:600;letter-spacing:-.02em;color:var(--text)}
+.login-brand-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.login-h{font-size:20px;font-weight:600;letter-spacing:-.03em;margin-bottom:5px}
+.login-p{font-size:12px;color:var(--text2);margin-bottom:28px;line-height:1.6}
+.lf{margin-bottom:13px}
+.lf label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;letter-spacing:.01em}
+.lf input{width:100%;padding:9px 11px;background:var(--white);border:1px solid var(--border2);color:var(--text);font-size:12.5px;outline:none;transition:border-color 150ms;border-radius:0}
+.lf input:focus{border-color:var(--text3)}
+.login-btn{width:100%;padding:10px;margin-top:6px;background:var(--text);color:var(--white);font-size:12.5px;font-weight:600;border-radius:0;transition:opacity 150ms,transform 100ms}
+.login-btn:hover{opacity:.88}
+.login-btn:active{transform:scale(0.99)}
+.login-err{font-size:11px;color:var(--red);margin-top:9px;opacity:0;transition:opacity 180ms;min-height:15px}
+.login-err.show{opacity:1}
+.login-hint{display:flex;align-items:flex-start;gap:7px;margin-top:28px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.55}
+.hint-key{font-family:monospace;background:var(--bg3);padding:1px 5px;border:1px solid var(--border);color:var(--text2);font-size:10.5px}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────────── */
+#app{display:flex;height:100vh;overflow:hidden}
+#app.hidden{opacity:0;pointer-events:none}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────────────── */
+.sidebar{width:var(--panel);flex-shrink:0;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:transform 280ms var(--ease-out)}
+.sb-head{padding:16px 16px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.sb-mark{width:26px;height:26px;background:var(--text);display:grid;place-items:center;flex-shrink:0}
+.sb-mark svg{width:14px;height:14px}
+.sb-name{font-size:12.5px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.sb-ver{font-size:10px;color:var(--text3);margin-top:1px}
+.sb-section{padding:14px 14px 5px;font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;margin:1px 6px;font-size:12px;color:var(--text2);cursor:pointer;transition:color 120ms,background 120ms;position:relative;border-radius:0}
+.nav-item:hover{color:var(--text);background:var(--bg3)}
+.nav-item.active{color:var(--text);background:var(--bg3)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:2px;height:58%;background:var(--text)}
+.nav-ico{width:15px;height:15px;flex-shrink:0;opacity:.6}
+.nav-item.active .nav-ico,.nav-item:hover .nav-ico{opacity:1}
+.n-badge{margin-left:auto;font-size:10px;padding:1px 6px;font-weight:600;min-width:18px;text-align:center}
+.n-badge.red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.n-badge.yellow{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
+.n-badge.green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.n-badge.blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.sb-spacer{flex:1}
+.sb-status{padding:12px 14px;border-top:1px solid var(--border)}
+.st-row{display:flex;align-items:center;gap:7px;margin-bottom:7px;font-size:11px}
+.st-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.st-lbl{color:var(--text2)}
+.st-val{margin-left:auto;color:var(--text);font-variant-numeric:tabular-nums;font-size:10.5px}
+.sb-admin{padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.admin-av{width:26px;height:26px;background:var(--bg3);border:1px solid var(--border2);display:grid;place-items:center;font-size:10px;font-weight:600;flex-shrink:0}
+.admin-nm{font-size:11px;font-weight:500}
+.admin-rl{font-size:10px;color:var(--text3)}
+.admin-out{margin-left:auto;font-size:10px;color:var(--text3);padding:3px 8px;border:1px solid var(--border2);transition:color 120ms,border-color 120ms}
+.admin-out:hover{color:var(--text);border-color:var(--border3)}
+
+/* ── MAIN ────────────────────────────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:var(--bg)}
+.topbar{height:46px;padding:0 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--white)}
+.topbar-title{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.topbar-sub{font-size:11px;color:var(--text3)}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:7px}
+.tb-pill{display:flex;align-items:center;gap:5px;padding:4px 9px;font-size:11px;border:1px solid var(--border2);color:var(--text2);background:var(--white)}
+.tb-dot{width:5px;height:5px;border-radius:50%;background:var(--green)}
+.tb-pill.danger{border-color:var(--red-border);color:var(--red);background:var(--red-bg)}
+.tb-pill.danger .tb-dot{background:var(--red)}
+.menu-btn{display:none;padding:7px;color:var(--text2);transition:color 120ms}
+.menu-btn:hover{color:var(--text)}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;padding:18px;scroll-behavior:smooth}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:var(--border2)}
+
+/* ── PAGE ────────────────────────────────────────────────────────────────── */
+.page{display:none}
+.page.active{display:block}
+
+/* ── STAT GRID ───────────────────────────────────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+@media(max-width:900px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.stat-grid{grid-template-columns:1fr}}
+.stat-card{background:var(--white);border:1px solid var(--border);padding:14px}
+.sc-label{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.sc-val{font-size:24px;font-weight:600;letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1;color:var(--text)}
+.sc-val span{font-size:13px;color:var(--text3);font-weight:400}
+.sc-sub{font-size:11px;color:var(--text2);margin-top:5px}
+.sc-sub .up{color:var(--green)}
+.sc-sub .dn{color:var(--red)}
+.sc-bar{height:2px;background:var(--bg3);margin-top:8px}
+.sc-fill{height:100%;transition:width 900ms var(--ease-out)}
+
+/* ── SECTION HEADER ──────────────────────────────────────────────────────── */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+.sh-title{font-size:12.5px;font-weight:600}
+.sh-meta{font-size:11px;color:var(--text3)}
+.sh-btn{font-size:11px;color:var(--text2);padding:4px 9px;border:1px solid var(--border2);background:var(--white);transition:color 120ms,border-color 120ms}
+.sh-btn:hover{color:var(--text);border-color:var(--border3)}
+
+/* ── TERM TOOLTIP ────────────────────────────────────────────────────────── */
+.term{
+  border-bottom:1px dashed var(--border3);cursor:help;position:relative;
+  display:inline-block;
+}
+.term-tip{
+  display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--text);color:var(--white);font-size:10.5px;line-height:1.5;
+  padding:7px 10px;width:220px;z-index:999;pointer-events:none;white-space:normal;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);
+}
+.term-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--text)}
+.term:hover .term-tip,.term:focus .term-tip{display:block}
+
+/* ── CHARTS ──────────────────────────────────────────────────────────────── */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+@media(max-width:600px){.chart-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--white);border:1px solid var(--border);padding:14px}
+.cc-title{font-size:11px;color:var(--text2);margin-bottom:12px;font-weight:500}
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:72px;padding-bottom:4px}
+.bc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.bc-bar{width:100%;min-height:2px;transition:height 700ms var(--ease-out)}
+.bc-lbl{font-size:9px;color:var(--text3);text-align:center}
+.sparkline{height:38px;margin-bottom:6px}
+.sparkline svg{width:100%;height:100%}
+.sp-label{font-size:9px;color:var(--text3);display:flex;justify-content:space-between}
+
+/* ── FEED ────────────────────────────────────────────────────────────────── */
+.feed-wrap{background:var(--white);border:1px solid var(--border);max-height:300px;overflow-y:auto;margin-bottom:18px}
+.feed-wrap::-webkit-scrollbar{width:3px}
+.feed-wrap::-webkit-scrollbar-thumb{background:var(--border2)}
+.feed-hdr{display:grid;grid-template-columns:88px 110px 1fr 70px 70px 66px;gap:6px;padding:7px 13px;border-bottom:1px solid var(--border);font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;position:sticky;top:0;background:var(--bg3);z-index:1}
+.feed-row{display:grid;grid-template-columns:88px 110px 1fr 70px 70px 66px;gap:6px;padding:8px 13px;border-bottom:1px solid var(--border);font-size:11.5px;color:var(--text2);transition:background 120ms;animation:rowIn 220ms var(--ease-out) both}
+@keyframes rowIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+.feed-row:hover{background:var(--bg3);color:var(--text)}
+.feed-row:last-child{border-bottom:none}
+.feed-ent{color:var(--text);font-weight:500;font-family:monospace;font-size:11px}
+.sev{font-size:9.5px;font-weight:600;padding:2px 5px;display:inline-block}
+.sev-high{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.sev-med{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
+.sev-low{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.sev-info{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+
+/* ── ENTITY TABLE ────────────────────────────────────────────────────────── */
+.table-wrap{background:var(--white);border:1px solid var(--border);overflow-x:auto;margin-bottom:18px}
+.table-wrap::-webkit-scrollbar{height:3px}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--border2)}
+.etbl{width:100%;border-collapse:collapse;font-size:12px}
+.etbl th{text-align:left;padding:8px 11px;font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);font-weight:400;background:var(--bg3);position:sticky;top:0;z-index:1;white-space:nowrap}
+.etbl td{padding:9px 11px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.etbl tr:hover td{background:var(--bg3);cursor:pointer}
+.etbl tr:last-child td{border-bottom:none}
+.ent-name{color:var(--text);font-weight:500;font-family:monospace;font-size:11px}
+.score-bar{width:60px;height:3px;background:var(--bg3);display:inline-block;vertical-align:middle;margin-left:7px;overflow:hidden}
+.score-fill{height:100%;transition:width 600ms var(--ease-out)}
+
+/* ── SHAP ────────────────────────────────────────────────────────────────── */
+.shap-card{background:var(--white);border:1px solid var(--border);padding:14px;margin-bottom:16px}
+.shap-h{font-size:12px;font-weight:600;margin-bottom:3px}
+.shap-p{font-size:11px;color:var(--text2);margin-bottom:14px;line-height:1.55}
+.shap-row{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.shap-feat{font-size:10.5px;color:var(--text2);width:155px;flex-shrink:0;font-family:monospace}
+.shap-bw{flex:1;height:7px;background:var(--bg3);overflow:hidden;position:relative}
+.shap-b{height:100%;transition:width 800ms var(--ease-out)}
+.shap-pos{background:var(--red)}
+.shap-neg{background:var(--blue)}
+.shap-v{font-size:10px;color:var(--text3);width:42px;text-align:right;font-variant-numeric:tabular-nums}
+.shap-leg{display:flex;gap:14px;margin-top:10px}
+.shap-li{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3)}
+.shap-ld{width:8px;height:8px}
+
+/* ── ALERTS ──────────────────────────────────────────────────────────────── */
+.alert-item{display:flex;gap:11px;padding:12px 13px;border:1px solid var(--border);margin-bottom:8px;background:var(--white);transition:border-color 120ms;animation:rowIn 260ms var(--ease-out) both}
+.alert-item:hover{border-color:var(--border3)}
+.alert-ico{width:30px;height:30px;display:grid;place-items:center;flex-shrink:0;font-size:13px}
+.alert-ico.high{background:var(--red-bg)}
+.alert-ico.med{background:var(--yellow-bg)}
+.alert-ico.low{background:var(--green-bg)}
+.alert-body{flex:1;min-width:0}
+.alert-hd{display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap}
+.alert-name{font-size:12px;font-weight:500;color:var(--text)}
+.alert-time{font-size:10px;color:var(--text3);margin-left:auto}
+.alert-desc{font-size:11px;color:var(--text2);line-height:1.55}
+.alert-tags{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
+.tag{font-size:9.5px;padding:1px 6px;border:1px solid var(--border2);color:var(--text3)}
+.alert-act{align-self:center;padding:5px 10px;border:1px solid var(--border2);font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0;background:var(--white);transition:color 120ms,border-color 120ms,background 120ms}
+.alert-act:hover{color:var(--text);border-color:var(--border3);background:var(--bg3)}
+
+/* ── USER PROFILE CARD ───────────────────────────────────────────────────── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:50;display:none;align-items:center;justify-content:center;padding:14px}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--white);border:1px solid var(--border2);width:100%;max-width:580px;max-height:92vh;overflow-y:auto;animation:modalIn 200ms var(--ease-out) both;box-shadow:0 8px 40px rgba(0,0,0,.12)}
+@keyframes modalIn{from{opacity:0;transform:scale(0.97)}to{opacity:1;transform:scale(1)}}
+.modal::-webkit-scrollbar{width:3px}
+.modal::-webkit-scrollbar-thumb{background:var(--border2)}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:13px;font-weight:600}
+.modal-close{font-size:17px;color:var(--text3);padding:3px 7px;transition:color 120ms}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:16px}
+
+/* User profile layout */
+.upr-hero{display:flex;align-items:flex-start;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.upr-av{width:52px;height:52px;background:var(--bg3);border:1px solid var(--border2);display:grid;place-items:center;font-size:16px;font-weight:600;flex-shrink:0;color:var(--text)}
+.upr-av.risk-high{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+.upr-av.risk-med{background:var(--yellow-bg);border-color:var(--yellow-border);color:var(--yellow)}
+.upr-av.risk-low{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.upr-id{font-size:18px;font-weight:600;font-family:monospace;letter-spacing:-.02em;margin-bottom:3px}
+.upr-meta{font-size:11px;color:var(--text2)}
+.upr-risk-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;font-size:10.5px;font-weight:600;margin-top:5px}
+.upr-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:14px}
+.upr-tab{padding:7px 13px;font-size:11.5px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:color 120ms,border-color 120ms;margin-bottom:-1px}
+.upr-tab.active{color:var(--text);border-bottom-color:var(--text)}
+.upr-tab:hover{color:var(--text)}
+.upr-panel{display:none}
+.upr-panel.active{display:block}
+.kv-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.kv-row:last-child{border-bottom:none}
+.kv-key{color:var(--text2)}
+.kv-val{color:var(--text);font-family:monospace;font-size:11px;text-align:right}
+.kv-val.red{color:var(--red)}
+.kv-val.green{color:var(--green)}
+.kv-val.yellow{color:var(--yellow)}
+
+/* Block/quarantine panel */
+.block-panel{background:var(--red-bg);border:1px solid var(--red-border);padding:12px 14px;margin-top:12px}
+.block-title{font-size:11.5px;font-weight:600;color:var(--red);margin-bottom:6px}
+.block-desc{font-size:11px;color:var(--red);line-height:1.55;margin-bottom:10px;opacity:.8}
+.block-actions{display:flex;gap:7px;flex-wrap:wrap}
+.block-btn{padding:6px 12px;font-size:11px;font-weight:600;border:1px solid;transition:opacity 130ms,transform 100ms;cursor:pointer}
+.block-btn:hover{opacity:.88}
+.block-btn:active{transform:scale(0.98)}
+.block-btn.danger{background:var(--red);color:var(--white);border-color:var(--red)}
+.block-btn.warn{background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow-border)}
+.block-btn.safe{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+
+/* Timeline in user modal */
+.timeline-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.timeline-item:last-child{border-bottom:none}
+.tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.tl-body{flex:1;min-width:0}
+.tl-evt{font-size:11.5px;color:var(--text);font-weight:500}
+.tl-meta{font-size:10.5px;color:var(--text3);margin-top:2px}
+
+/* modal footer */
+.modal-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:7px}
+.mf-btn{padding:7px 14px;font-size:11.5px;border:1px solid var(--border2);background:var(--white);color:var(--text2);transition:color 120ms,border-color 120ms,background 120ms;font-weight:500}
+.mf-btn:hover{color:var(--text);border-color:var(--border3);background:var(--bg3)}
+.mf-btn.primary{background:var(--text);color:var(--white);border-color:var(--text)}
+.mf-btn.primary:hover{opacity:.88}
+
+/* ── SETTINGS ────────────────────────────────────────────────────────────── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.settings-grid{grid-template-columns:1fr}}
+.set-card{background:var(--white);border:1px solid var(--border);padding:16px}
+.set-card-title{font-size:12px;font-weight:600;margin-bottom:12px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+.set-row:last-child{border-bottom:none}
+.set-lbl{color:var(--text2)}
+.set-val{color:var(--text);font-family:monospace;font-size:11px}
+.toggle{width:30px;height:17px;background:var(--bg3);border:1px solid var(--border2);position:relative;cursor:pointer;transition:background 180ms;flex-shrink:0}
+.toggle.on{background:var(--text)}
+.tgl-th{position:absolute;top:2px;left:2px;width:11px;height:11px;background:var(--text3);transition:transform 180ms var(--ease-out),background 180ms}
+.toggle.on .tgl-th{transform:translateX(13px);background:var(--white)}
+.set-input{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:3px 7px;font-size:11.5px;font-family:monospace;width:72px;text-align:right;outline:none;transition:border-color 140ms}
+.set-input:focus{border-color:var(--border3)}
+.save-btn{margin-top:12px;width:100%;padding:9px;background:var(--text);color:var(--white);font-size:12px;font-weight:600;transition:opacity 140ms,transform 100ms}
+.save-btn:hover{opacity:.88}
+.save-btn:active{transform:scale(0.99)}
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+.toast-wrap{position:fixed;bottom:18px;right:18px;z-index:200;display:flex;flex-direction:column;gap:5px}
+.toast{padding:9px 14px;background:var(--text);color:var(--white);font-size:11.5px;font-weight:500;max-width:280px;animation:toastIn 180ms var(--ease-out) both;box-shadow:0 4px 20px rgba(0,0,0,.14)}
+.toast.warn{background:var(--red)}
+@keyframes toastIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateY(4px)}}
+.toast.out{animation:toastOut 160ms var(--ease-out) forwards}
+
+/* ── MOBILE ──────────────────────────────────────────────────────────────── */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:30}
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:40;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .menu-btn{display:flex}
+  .mob-overlay.open{display:block}
+  .content{padding:12px}
+  .feed-hdr,.feed-row{grid-template-columns:72px 1fr 58px 50px}
+  .feed-hdr :nth-child(3),.feed-row :nth-child(3),
+  .feed-hdr :nth-child(5),.feed-row :nth-child(5){display:none}
+  .settings-grid{grid-template-columns:1fr}
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.live-pulse{animation:pulse 2.2s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-brand">
+      <div class="login-mark">
+        <svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.6"><rect x="1" y="1" width="16" height="16"/><path d="M5 9h8M9 5v8"/></svg>
+      </div>
+      <div>
+        <div class="login-brand-name">NetGuard IDS</div>
+        <div class="login-brand-sub">LSTM-Autoencoder · SHAP Explainability</div>
+      </div>
+    </div>
+    <div class="login-h">Admin access</div>
+    <div class="login-p">Restricted to authorised network administrators only. All sessions are logged and audited by the LSTM-AE engine.</div>
+    <div class="lf"><label>Username</label><input id="lu" type="text" placeholder="admin" autocomplete="username"></div>
+    <div class="lf"><label>Passphrase</label><input id="lp" type="password" placeholder="••••••••••" autocomplete="current-password"></div>
+    <div class="lf"><label>Access key</label><input id="lk" type="text" placeholder="NG-XXXX-XXXX-XXXX" autocomplete="off"></div>
+    <button class="login-btn" onclick="doLogin()">Authenticate →</button>
+    <div class="login-err" id="lerr"></div>
+    <div class="login-hint">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" style="flex-shrink:0;margin-top:1px"><rect x="1" y="5" width="10" height="7"/><path d="M3.5 5V3.5a2.5 2.5 0 0 1 5 0V5"/></svg>
+      <div>Demo credentials: &nbsp;<span class="hint-key">admin</span> / <span class="hint-key">admin123</span> / <span class="hint-key">NG-0000-0000-0000</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div class="mob-overlay" id="mob-ov" onclick="closeSb()"></div>
+
+  <div class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="sb-mark"><svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.6"><rect x="1" y="1" width="16" height="16"/><path d="M5 9h8M9 5v8"/></svg></div>
+      <div><div class="sb-name">NetGuard IDS</div><div class="sb-ver">v2.4 · LSTM-AE · INT8</div></div>
+    </div>
+    <div class="sb-section">Monitoring</div>
+    <div class="nav-item active" onclick="nav('dashboard',this)">
+      <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="6" height="6"/><rect x="9" y="1" width="6" height="6"/><rect x="1" y="9" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/></svg>
+      Dashboard <span class="n-badge red live-pulse" id="ac">3</span>
+    </div>
+    <div class="nav-item" onclick="nav('entities',this)">
+      <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="5" r="2.5"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6"/></svg>
+      Entity Profiler <span class="n-badge yellow">47</span>
+    </div>
+    <div class="nav-item" onclick="nav('feed',this)">
+      <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4h14M1 8h14M1 12h8"/></svg>
+      Live Feed <span class="n-badge green">LIVE</span>
+    </div>
+    <div class="nav-item" onclick="nav('shap',this)">
+      <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 14l3-5 3 2 3-4 3 3"/><line x1="2" y1="2" x2="2" y2="14"/><line x1="2" y1="14" x2="14" y2="14"/></svg>
+      SHAP Explainer
+    </div>
+    <div class="sb-section">Management</div>
+    <div class="nav-item" onclick="nav('alerts',this)">
+      <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2l1.5 4h4l-3.5 2.5 1.5 4L8 10l-3.5 2.5 1.5-4L2.5 6h4z"/></svg>
+      Alerts <span class="n-badge red" id="ab">3</span>
+    </div>
+    <div class="nav-item" onclick="nav('settings',this)">
+      <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4"/></svg>
+      Settings
+    </div>
+    <div class="sb-spacer"></div>
+    <div class="sb-status">
+      <div class="st-row"><div class="st-dot" style="background:var(--green)"></div><div class="st-lbl">Model</div><div class="st-val">Running · INT8</div></div>
+      <div class="st-row"><div class="st-dot" style="background:var(--green)"></div><div class="st-lbl">Entities</div><div class="st-val" id="ec">47 tracked</div></div>
+      <div class="st-row"><div class="st-dot" id="ar-dot" style="background:var(--yellow)"></div><div class="st-lbl">Anomaly rate</div><div class="st-val" id="ar">2.1%</div></div>
+    </div>
+    <div class="sb-admin">
+      <div class="admin-av">AD</div>
+      <div><div class="admin-nm">Admin</div><div class="admin-rl">Super Administrator</div></div>
+      <button class="admin-out" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="menu-btn" onclick="openSb()"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="1" y1="4" x2="14" y2="4"/><line x1="1" y1="7.5" x2="14" y2="7.5"/><line x1="1" y1="11" x2="14" y2="11"/></svg></button>
+      <div><div class="topbar-title" id="ttl">Dashboard</div><div class="topbar-sub" id="tsub">Network-wide overview</div></div>
+      <div class="tb-right">
+        <div class="tb-pill"><div class="tb-dot"></div>LSTM-AE active</div>
+        <div class="tb-pill danger live-pulse"><div class="tb-dot"></div><span id="apc">3</span> alerts</div>
+      </div>
+    </div>
+
+    <div class="content" id="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="sc-label">Entities monitored</div>
+            <div class="sc-val" id="d-ent">47</div>
+            <div class="sc-sub"><span class="up">↑ 3</span> added today</div>
+            <div class="sc-bar"><div class="sc-fill" style="width:78%;background:var(--text)"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Anomalies (24 h)</div>
+            <div class="sc-val" id="d-anom">12</div>
+            <div class="sc-sub"><span class="dn">↑ 4</span> vs yesterday</div>
+            <div class="sc-bar"><div class="sc-fill" style="width:24%;background:var(--red)"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label"><span class="term">Inference latency<span class="term-tip">Time the LSTM-Autoencoder takes to score one entity on CPU. Target is under 10 ms.</span></span></div>
+            <div class="sc-val">7.3<span>ms</span></div>
+            <div class="sc-sub" style="color:var(--green)">CPU-only · i5 target</div>
+            <div class="sc-bar"><div class="sc-fill" style="width:73%;background:var(--text)"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label"><span class="term">Model RAM<span class="term-tip">Memory used by the quantised GRU model at runtime. Target is under 200 MB for enterprise endpoint deployment.</span></span></div>
+            <div class="sc-val">142<span>MB</span></div>
+            <div class="sc-sub" style="color:var(--green)">&lt; 200 MB target</div>
+            <div class="sc-bar"><div class="sc-fill" style="width:71%;background:var(--text)"></div></div>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="chart-card">
+            <div class="cc-title">Anomaly events — last 7 days</div>
+            <div class="bar-chart" id="bar-chart"></div>
+          </div>
+          <div class="chart-card">
+            <div class="cc-title"><span class="term">Reconstruction error<span class="term-tip">The LSTM-Autoencoder encodes each entity's normal behaviour into a latent vector and reconstructs it. When the error between input and reconstruction is high, it signals anomalous behaviour.</span></span> — 24 h rolling</div>
+            <div class="sparkline"><svg id="spark-svg" viewBox="0 0 300 38" preserveAspectRatio="none"><polyline id="spark-ln" points="" fill="none" stroke="#111110" stroke-width="1.2"/><polyline id="spark-fill" points="" fill="rgba(17,17,16,0.05)" stroke="none"/></svg></div>
+            <div class="sp-label"><span>24 h ago</span><span>now</span></div>
+          </div>
+        </div>
+
+        <div class="sh">
+          <div class="sh-title">Recent anomaly events</div>
+          <div class="sh-meta live-pulse" id="feed-meta">● Live</div>
+        </div>
+        <div class="feed-wrap">
+          <div class="feed-hdr"><div>Time</div><div>Entity</div><div>Event</div><div>Protocol</div><div>Score</div><div>Severity</div></div>
+          <div id="mini-feed"></div>
+        </div>
+
+        <div class="sh">
+          <div class="sh-title">Top anomalous entities</div>
+          <button class="sh-btn" onclick="nav('entities',document.querySelectorAll('.nav-item')[1])">View all →</button>
+        </div>
+        <div class="table-wrap">
+          <table class="etbl"><thead><tr><th>Entity</th><th>Type</th><th>Risk score</th><th>Anomalies</th><th>Last seen</th><th>Status</th></tr></thead>
+          <tbody id="top-body"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ENTITIES -->
+      <div class="page" id="page-entities">
+        <div class="sh">
+          <div class="sh-title">All monitored entities</div>
+          <div class="sh-meta">Click any row for full profile + block options</div>
+        </div>
+        <div class="table-wrap">
+          <table class="etbl"><thead><tr><th>Entity ID</th><th>Type</th><th>IP Address</th><th><span class="term">Risk score<span class="term-tip">Normalised reconstruction error from the LSTM-Autoencoder. Scores above 0.70 are HIGH risk.</span></span></th><th>Anomalies 24 h</th><th>Baseline age</th><th>Last event</th><th></th></tr></thead>
+          <tbody id="full-body"></tbody></table>
+        </div>
+      </div>
+
+      <!-- LIVE FEED -->
+      <div class="page" id="page-feed">
+        <div class="sh"><div class="sh-title">Live event stream</div><div class="sh-meta live-pulse">● Streaming</div></div>
+        <div class="feed-wrap" style="max-height:calc(100vh - 170px)">
+          <div class="feed-hdr"><div>Time</div><div>Entity</div><div>Event</div><div>Protocol</div><div>Score</div><div>Severity</div></div>
+          <div id="live-feed"></div>
+        </div>
+      </div>
+
+      <!-- SHAP -->
+      <div class="page" id="page-shap">
+        <div class="sh">
+          <div class="sh-title"><span class="term">SHAP DeepExplainer<span class="term-tip">SHapley Additive exPlanations applied to LSTM hidden states. Each feature is assigned a value representing its contribution to the anomaly score. More reliable than attention weights (Jain & Wallace, 2019).</span></span> — Feature Attribution</div>
+          <div class="sh-meta">Per-entity · LSTM hidden states</div>
+        </div>
+        <div class="chart-grid" style="margin-bottom:13px">
+          <div class="chart-card">
+            <div class="cc-title">Selected entity</div>
+            <div style="font-family:monospace;font-size:18px;font-weight:600;margin-bottom:4px" id="shap-ent">USR-0047</div>
+            <div style="font-size:11px;color:var(--text2)">Risk: <span id="shap-risk" style="color:var(--red);font-weight:600">HIGH · 0.847</span></div>
+            <div style="font-size:11px;color:var(--text2);margin-top:3px"><span class="term">Reconstruction error<span class="term-tip">How far the entity's recent behaviour deviates from its learned normal baseline. Higher = more anomalous.</span></span>: <span id="shap-err" style="font-family:monospace">0.412</span></div>
+            <div style="margin-top:11px;display:flex;gap:7px;flex-wrap:wrap">
+              <button class="sh-btn" onclick="rotShap(-1)">← Prev</button>
+              <button class="sh-btn" onclick="rotShap(1)">Next →</button>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="cc-title">Reconstruction error — 48 h sequence</div>
+            <div class="sparkline"><svg id="shap-sp" viewBox="0 0 300 38" preserveAspectRatio="none"><polyline id="shap-sp-ln" points="" fill="none" stroke="var(--red)" stroke-width="1.2"/></svg></div>
+            <div class="sp-label"><span>48 h ago</span><span>now</span></div>
+            <div style="margin-top:7px;font-size:11px;color:var(--text2)"><span class="term">Anomaly threshold<span class="term-tip">The reconstruction error value above which the model raises an alert for this entity. Set in Settings.</span></span>: <span style="font-family:monospace;color:var(--text)">0.28</span> — exceeded at step 31/48</div>
+          </div>
+        </div>
+        <div class="shap-card">
+          <div class="shap-h">Top feature contributions</div>
+          <div class="shap-p">Positive values push <span class="term">reconstruction error<span class="term-tip">The gap between the model's expected behaviour and what was observed. High positive SHAP = this feature is driving the anomaly.</span></span> higher (anomaly signal). Negative values indicate normal behaviour for that feature.</div>
+          <div id="shap-rows"></div>
+          <div class="shap-leg">
+            <div class="shap-li"><div class="shap-ld" style="background:var(--red)"></div>Anomaly signal (positive SHAP)</div>
+            <div class="shap-li"><div class="shap-ld" style="background:var(--blue)"></div>Normal signal (negative SHAP)</div>
+          </div>
+        </div>
+        <div class="shap-card">
+          <div class="shap-h">SHAP vs <span class="term">Attention weights<span class="term-tip">Attention weights in LSTM models look like explanations but are not reliable proxies for feature importance (Jain & Wallace, 2019). SHAP DeepExplainer provides mathematically grounded attribution.</span></span> comparison</div>
+          <div class="shap-p">Per Jain & Wallace (2019): attention is not a reliable explanation. SHAP aligns more faithfully with permutation importance — our key differentiator from prior IDS explainability work.</div>
+          <div id="attn-rows"></div>
+        </div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="page" id="page-alerts">
+        <div class="sh">
+          <div class="sh-title">Active alerts</div>
+          <button class="sh-btn" onclick="clearAlerts()">Clear resolved</button>
+        </div>
+        <div id="alert-list"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <div class="sh"><div class="sh-title">System configuration</div><div class="sh-meta">LSTM-Autoencoder · GRU · INT8 quantised</div></div>
+        <div class="settings-grid">
+          <div class="set-card">
+            <div class="set-card-title">Model parameters</div>
+            <div class="set-row"><span class="set-lbl">Architecture</span><span class="set-val">GRU-Autoencoder</span></div>
+            <div class="set-row"><span class="set-lbl"><span class="term">Quantisation<span class="term-tip">INT8 static quantisation reduces model weights from 32-bit floats to 8-bit integers — cutting RAM usage ~4x and inference time ~3x with less than 2% accuracy loss.</span></span></span><span class="set-val">INT8 static</span></div>
+            <div class="set-row"><span class="set-lbl">Hidden units</span><input class="set-input" value="64" type="number"></div>
+            <div class="set-row"><span class="set-lbl">Sequence length</span><input class="set-input" value="24" type="number"></div>
+            <div class="set-row"><span class="set-lbl">Encoder layers</span><input class="set-input" value="2" type="number"></div>
+            <button class="save-btn" onclick="toast('Model config saved')">Apply model config</button>
+          </div>
+          <div class="set-card">
+            <div class="set-card-title">Detection thresholds</div>
+            <div class="set-row"><span class="set-lbl"><span class="term">Anomaly threshold<span class="term-tip">Reconstruction error above this value triggers an anomaly flag for an entity. Lower = more sensitive, more false positives.</span></span></span><input class="set-input" value="0.28" type="number" step="0.01"></div>
+            <div class="set-row"><span class="set-lbl">Alert threshold</span><input class="set-input" value="0.45" type="number" step="0.01"></div>
+            <div class="set-row"><span class="set-lbl"><span class="term">Sliding window<span class="term-tip">The model retrains on the most recent N days of data to handle concept drift — gradual changes in normal network behaviour over time.</span></span></span><input class="set-input" value="30" type="number"></div>
+            <div class="set-row"><span class="set-lbl"><span class="term">Concept drift retrain<span class="term-tip">Concept drift occurs when normal behaviour patterns shift over time, causing false positives. Enabling this keeps the baseline fresh.</span></span></span><div class="toggle on" id="t-drift" onclick="tgl('t-drift')"><div class="tgl-th"></div></div></div>
+            <div class="set-row"><span class="set-lbl">Per-entity baseline</span><div class="toggle on" id="t-ent" onclick="tgl('t-ent')"><div class="tgl-th"></div></div></div>
+            <button class="save-btn" onclick="toast('Thresholds saved')">Apply thresholds</button>
+          </div>
+          <div class="set-card">
+            <div class="set-card-title">SHAP explainability</div>
+            <div class="set-row"><span class="set-lbl">Method</span><span class="set-val">DeepExplainer</span></div>
+            <div class="set-row"><span class="set-lbl">Hidden state explain</span><div class="toggle on" id="t-shap" onclick="tgl('t-shap')"><div class="tgl-th"></div></div></div>
+            <div class="set-row"><span class="set-lbl">Top-K features</span><input class="set-input" value="8" type="number"></div>
+            <div class="set-row"><span class="set-lbl">Background samples</span><input class="set-input" value="100" type="number"></div>
+            <div class="set-row"><span class="set-lbl">Compare vs attention</span><div class="toggle on" id="t-attn" onclick="tgl('t-attn')"><div class="tgl-th"></div></div></div>
+            <button class="save-btn" onclick="toast('SHAP config saved')">Apply SHAP config</button>
+          </div>
+          <div class="set-card">
+            <div class="set-card-title">Network & data</div>
+            <div class="set-row"><span class="set-lbl">Monitor interface</span><span class="set-val">wlan0 (WiFi)</span></div>
+            <div class="set-row"><span class="set-lbl">Primary dataset</span><span class="set-val">CICIDS-2017</span></div>
+            <div class="set-row"><span class="set-lbl">Behaviour dataset</span><span class="set-val">LANL-2015</span></div>
+            <div class="set-row"><span class="set-lbl">Alert notifications</span><div class="toggle on" id="t-notif" onclick="tgl('t-notif')"><div class="tgl-th"></div></div></div>
+            <div class="set-row"><span class="set-lbl">Log retention (days)</span><input class="set-input" value="90" type="number"></div>
+            <button class="save-btn" onclick="toast('Network config saved')">Save network config</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ENTITY MODAL -->
+<div class="modal-backdrop" id="ent-modal" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-hd"><div class="modal-title" id="m-title">Entity profile</div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body" id="m-body"></div>
+    <div class="modal-footer" id="m-foot"></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="tw"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const EVTS=['Port scan','Brute force attempt','Data exfiltration','Lateral movement','Unusual login time','High packet rate','DNS tunneling','HTTP flood','SSH anomaly','SMB scan','ICMP sweep','FTP transfer','Telnet connection','ARP spoofing','Payload anomaly','Slow loris','Recon scan','Large upload','Failed auth spike','Protocol anomaly'];
+const PROTOS=['TCP','UDP','ICMP','HTTP','HTTPS','DNS','SSH','FTP','SMB','ARP'];
+const DEPTS=['Engineering','Finance','HR','IT Ops','Marketing','Security','Management','Research'];
+const LOCATIONS=['Building A — F3','Building B — L2','Remote (VPN)','Data Centre','Lab 4','Server Room'];
+
+let seed=42;
+function sr(){seed=(seed*9301+49297)%233280;return seed/233280}
+
+function gen47(){
+  const out=[];
+  for(let i=0;i<47;i++){
+    const isUsr=i<20,isDev=i>=20&&i<35;
+    const id=isUsr?`USR-${String(i+1).padStart(4,'0')}`:isDev?`DEV-${String(i-19).padStart(4,'0')}`:`SRV-${String(i-34).padStart(4,'0')}`;
+    const type=isUsr?'User':isDev?'Device':'Server';
+    const score=parseFloat((sr()*0.9+0.05).toFixed(3));
+    const risk=score>0.7?'high':score>0.4?'med':score>0.2?'low':'none';
+    const ip=`192.168.${Math.floor(sr()*4)+1}.${Math.floor(sr()*250)+2}`;
+    const dept=DEPTS[Math.floor(sr()*DEPTS.length)];
+    const loc=LOCATIONS[Math.floor(sr()*LOCATIONS.length)];
+    const loginTime=`${String(6+Math.floor(sr()*14)).padStart(2,'0')}:${String(Math.floor(sr()*60)).padStart(2,'0')}`;
+    const sessions=Math.floor(sr()*40)+1;
+    const dataOut=parseFloat((sr()*500+10).toFixed(1));
+    const anoms=Math.floor(sr()*15);
+    const baseAge=Math.floor(sr()*28)+1;
+    const minsAgo=Math.floor(sr()*120);
+    const os=isDev?['Windows 11','Windows 10','macOS 14','Ubuntu 22','Android 14'][Math.floor(sr()*5)]:'N/A';
+    const mac=`${[...Array(6)].map(()=>Math.floor(sr()*256).toString(16).padStart(2,'0').toUpperCase()).join(':')}`;
+    out.push({id,type,ip,dept,loc,loginTime,sessions,dataOut,anoms,baseAge,minsAgo,os,mac,score,risk});
+  }
+  return out;
+}
+const ENTS=gen47();
+
+const FEATS=['pkt_len_mean','flow_duration','pkt_iat_mean','bwd_pkt_len_max','fwd_iat_std','bwd_iat_total','fin_flag_cnt','pkt_len_var','flow_bytes_s','fwd_seg_size_avg'];
+
+function shapData(idx){
+  seed=idx*137+99;
+  return FEATS.map(f=>({feat:f,shap:parseFloat(((sr()-0.35)*0.8).toFixed(3)),attn:parseFloat((sr()*0.5).toFixed(3))}));
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+function doLogin(){
+  const u=document.getElementById('lu').value.trim();
+  const p=document.getElementById('lp').value;
+  const k=document.getElementById('lk').value.trim().toUpperCase();
+  const err=document.getElementById('lerr');
+  if(u==='admin'&&p==='admin123'&&k==='NG-0000-0000-0000'){
+    err.classList.remove('show');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    initApp();
+  } else {
+    err.textContent='Invalid credentials — check username, passphrase, and access key.';
+    err.classList.add('show');
+  }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&!document.getElementById('login-screen').classList.contains('hidden'))doLogin()});
+
+function doLogout(){
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('lp').value='';document.getElementById('lk').value='';
+  clearInterval(feedTmr);clearInterval(statTmr);
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+const PTITLES={dashboard:['Dashboard','Network-wide overview'],entities:['Entity Profiler','Per-entity LSTM behavioural baseline'],feed:['Live Feed','Real-time anomaly event stream'],shap:['SHAP Explainer','DeepExplainer on LSTM hidden states'],alerts:['Alerts','Active anomaly alerts'],settings:['Settings','Model & detection configuration']};
+function nav(pg,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+pg).classList.add('active');
+  if(el) el.classList.add('active');
+  const t=PTITLES[pg]||[pg,''];
+  document.getElementById('ttl').textContent=t[0];
+  document.getElementById('tsub').textContent=t[1];
+  document.getElementById('content').scrollTop=0;
+  if(window.innerWidth<=768)closeSb();
+  if(pg==='shap')renderShap();
+  if(pg==='alerts')renderAlerts();
+}
+function openSb(){document.getElementById('sidebar').classList.add('open');document.getElementById('mob-ov').classList.add('open')}
+function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mob-ov').classList.remove('open')}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+let feedTmr,statTmr,alertCnt=3,shapIdx=0;
+function initApp(){
+  renderBar();renderSpark('spark-ln','spark-fill',20);
+  renderMiniFeed();renderTopEnts();renderFullEnts();
+  renderShap();renderAlerts();
+  feedTmr=setInterval(tickFeed,2400);
+  statTmr=setInterval(tickStats,5000);
+}
+
+// ── BAR CHART ─────────────────────────────────────────────────────────────────
+function renderBar(){
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],vals=[5,8,3,12,7,9,6];
+  const mx=Math.max(...vals);
+  const w=document.getElementById('bar-chart');w.innerHTML='';
+  days.forEach((d,i)=>{
+    const c=document.createElement('div');c.className='bc-col';
+    const b=document.createElement('div');b.className='bc-bar';
+    b.style.cssText=`height:0;background:${vals[i]===mx?'var(--red)':'var(--border2)'};transition:height 700ms var(--ease-out) ${i*55}ms`;
+    const l=document.createElement('div');l.className='bc-lbl';l.textContent=d;
+    c.append(b,l);w.appendChild(c);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>b.style.height=(vals[i]/mx*100)+'%'));
+  });
+}
+
+// ── SPARKLINE ─────────────────────────────────────────────────────────────────
+function renderSpark(lid,fid,pts){
+  const W=300,H=38;
+  const v=Array.from({length:pts},()=>0.12+Math.sin(Math.random()*4)*0.07+Math.random()*0.1);
+  const mn=Math.min(...v),mx=Math.max(...v),rng=mx-mn||.01;
+  const pts2=v.map((y,i)=>`${i/(pts-1)*W},${H-(y-mn)/rng*(H-4)-2}`).join(' ');
+  document.getElementById(lid).setAttribute('points',pts2);
+  if(fid) document.getElementById(fid).setAttribute('points',pts2+` ${W},${H} 0,${H}`);
+}
+
+// ── MINI FEED ─────────────────────────────────────────────────────────────────
+function genEvt(){
+  const e=ENTS[Math.floor(Math.random()*ENTS.length)];
+  const sc=parseFloat((Math.random()*0.9+0.05).toFixed(3));
+  const sv=sc>.75?'high':sc>.45?'med':sc>.25?'low':'info';
+  return{time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),entity:e.id,event:EVTS[Math.floor(Math.random()*EVTS.length)],protocol:PROTOS[Math.floor(Math.random()*PROTOS.length)],score:sc,sev:sv};
+}
+function prependRow(wrapId,ev,maxRows){
+  const w=document.getElementById(wrapId);
+  const r=document.createElement('div');r.className='feed-row';
+  r.innerHTML=`<div style="font-family:monospace;font-size:10.5px">${ev.time}</div><div class="feed-ent">${ev.entity}</div><div>${ev.event}</div><div>${ev.protocol}</div><div style="font-variant-numeric:tabular-nums">${ev.score.toFixed(3)}</div><div><span class="sev sev-${ev.sev}">${ev.sev.toUpperCase()}</span></div>`;
+  if(w.firstChild)w.insertBefore(r,w.firstChild);else w.appendChild(r);
+  while(w.children.length>maxRows)w.removeChild(w.lastChild);
+}
+function renderMiniFeed(){const w=document.getElementById('mini-feed');w.innerHTML='';for(let i=0;i<8;i++)prependRow('mini-feed',genEvt(),8)}
+
+function tickFeed(){
+  const ev=genEvt();
+  prependRow('mini-feed',ev,8);prependRow('live-feed',ev,60);
+  if(ev.sev==='high'){alertCnt++;updateBadges();toast(`High severity: ${ev.entity} — ${ev.event}`,'warn')}
+}
+function updateBadges(){['ac','ab','apc'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=alertCnt})}
+
+function tickStats(){
+  const e=47+Math.floor(Math.random()*3);
+  document.getElementById('ec').textContent=e+' tracked';
+  document.getElementById('d-ent').textContent=e;
+  document.getElementById('ar').textContent=(1.8+Math.random()*1.2).toFixed(1)+'%';
+  renderSpark('spark-ln','spark-fill',20);
+}
+
+// ── ENTITY TABLES ─────────────────────────────────────────────────────────────
+function scoreCol(s){return s>.7?'var(--red)':s>.4?'var(--yellow)':s>.2?'var(--green)':'var(--text3)'}
+function renderTopEnts(){
+  const top=ENTS.slice().sort((a,b)=>b.score-a.score).slice(0,6);
+  document.getElementById('top-body').innerHTML=top.map(e=>`
+    <tr onclick='openEnt(${ENTS.indexOf(e)})'>
+      <td><span class="ent-name">${e.id}</span></td>
+      <td>${e.type}</td>
+      <td><span style="font-variant-numeric:tabular-nums;color:${scoreCol(e.score)};font-weight:500">${e.score.toFixed(3)}</span><div class="score-bar"><div class="score-fill" style="width:${Math.round(e.score*100)}%;background:${scoreCol(e.score)}"></div></div></td>
+      <td style="color:${e.anoms>5?'var(--red)':'var(--text2)'}">${e.anoms}</td>
+      <td>${e.minsAgo}m ago</td>
+      <td><span class="sev sev-${e.risk==='high'?'high':e.risk==='med'?'med':e.risk==='low'?'low':'info'}">${e.risk.toUpperCase()}</span></td>
+    </tr>`).join('');
+}
+function renderFullEnts(){
+  document.getElementById('full-body').innerHTML=ENTS.map((e,i)=>`
+    <tr onclick='openEnt(${i})'>
+      <td><span class="ent-name">${e.id}</span></td>
+      <td>${e.type}</td>
+      <td style="font-family:monospace;font-size:10.5px">${e.ip}</td>
+      <td><span style="font-variant-numeric:tabular-nums;color:${scoreCol(e.score)};font-weight:500">${e.score.toFixed(3)}</span><div class="score-bar"><div class="score-fill" style="width:${Math.round(e.score*100)}%;background:${scoreCol(e.score)}"></div></div></td>
+      <td style="color:${e.anoms>5?'var(--red)':'var(--text2)'}">${e.anoms}</td>
+      <td>${e.baseAge}d</td>
+      <td>${e.minsAgo}m ago</td>
+      <td><button class="sh-btn" onclick="event.stopPropagation();openEnt(${i})">View profile</button></td>
+    </tr>`).join('');
+}
+
+// ── ENTITY MODAL ──────────────────────────────────────────────────────────────
+function openEnt(idx){
+  const e=ENTS[idx];
+  const initials=e.id.replace(/[^A-Z]/g,'').slice(0,2)||'??';
+  const shVals=shapData(idx).sort((a,b)=>Math.abs(b.shap)-Math.abs(a.shap)).slice(0,3);
+  const recentEvts=[
+    {sev:'high',evt:EVTS[Math.floor(Math.random()*EVTS.length)],time:`${e.minsAgo}m ago`},
+    {sev:'med',evt:EVTS[Math.floor(Math.random()*EVTS.length)],time:`${e.minsAgo+18}m ago`},
+    {sev:'low',evt:EVTS[Math.floor(Math.random()*EVTS.length)],time:`${e.minsAgo+45}m ago`},
+  ];
+  document.getElementById('m-title').textContent='Entity profile';
+  document.getElementById('m-body').innerHTML=`
+    <div class="upr-hero">
+      <div class="upr-av risk-${e.risk}">${initials}</div>
+      <div>
+        <div class="upr-id">${e.id}</div>
+        <div class="upr-meta">${e.type} · ${e.dept} · ${e.loc}</div>
+        <div style="margin-top:5px"><span class="sev sev-${e.risk==='high'?'high':e.risk==='med'?'med':e.risk==='low'?'low':'info'}" style="font-size:10px">${e.risk.toUpperCase()} RISK</span></div>
+      </div>
+    </div>
+
+    <div class="upr-tabs">
+      <div class="upr-tab active" onclick="switchTab(this,'tab-info')">Identity</div>
+      <div class="upr-tab" onclick="switchTab(this,'tab-risk')">Risk & Anomaly</div>
+      <div class="upr-tab" onclick="switchTab(this,'tab-activity')">Recent activity</div>
+      <div class="upr-tab" onclick="switchTab(this,'tab-block')">Actions</div>
+    </div>
+
+    <div id="tab-info" class="upr-panel active">
+      <div class="kv-row"><span class="kv-key">Entity ID</span><span class="kv-val">${e.id}</span></div>
+      <div class="kv-row"><span class="kv-key">Type</span><span class="kv-val">${e.type}</span></div>
+      <div class="kv-row"><span class="kv-key">IP address</span><span class="kv-val">${e.ip}</span></div>
+      <div class="kv-row"><span class="kv-key">MAC address</span><span class="kv-val">${e.mac}</span></div>
+      <div class="kv-row"><span class="kv-key">Department</span><span class="kv-val">${e.dept}</span></div>
+      <div class="kv-row"><span class="kv-key">Location</span><span class="kv-val">${e.loc}</span></div>
+      <div class="kv-row"><span class="kv-key">OS / Platform</span><span class="kv-val">${e.os}</span></div>
+      <div class="kv-row"><span class="kv-key">Typical login time</span><span class="kv-val">${e.loginTime}</span></div>
+      <div class="kv-row"><span class="kv-key">Active sessions (24 h)</span><span class="kv-val">${e.sessions}</span></div>
+      <div class="kv-row"><span class="kv-key">Data out (24 h)</span><span class="kv-val">${e.dataOut} MB</span></div>
+    </div>
+
+    <div id="tab-risk" class="upr-panel">
+      <div class="kv-row"><span class="kv-key">Risk score</span><span class="kv-val ${e.risk==='high'?'red':e.risk==='med'?'yellow':'green'}">${e.score.toFixed(3)}</span></div>
+      <div class="kv-row"><span class="kv-key">Risk level</span><span class="kv-val ${e.risk==='high'?'red':e.risk==='med'?'yellow':'green'}">${e.risk.toUpperCase()}</span></div>
+      <div class="kv-row"><span class="kv-key">Reconstruction error</span><span class="kv-val ${e.risk==='high'?'red':e.risk==='med'?'yellow':''}">${(e.score*0.6).toFixed(3)}</span></div>
+      <div class="kv-row"><span class="kv-key">Anomalies (24 h)</span><span class="kv-val ${e.anoms>5?'red':''}">${e.anoms}</span></div>
+      <div class="kv-row"><span class="kv-key">Baseline age</span><span class="kv-val">${e.baseAge} days</span></div>
+      <div class="kv-row"><span class="kv-key">Last anomaly event</span><span class="kv-val">${e.minsAgo} min ago</span></div>
+      <div style="margin-top:12px;font-size:10.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Top SHAP features</div>
+      ${shVals.map(f=>`<div class="kv-row"><span class="kv-key" style="font-family:monospace;font-size:10.5px">${f.feat}</span><span class="kv-val ${f.shap>0?'red':'green'}">${f.shap>0?'+':''}${f.shap.toFixed(3)}</span></div>`).join('')}
+    </div>
+
+    <div id="tab-activity" class="upr-panel">
+      ${recentEvts.map(ev=>`
+        <div class="timeline-item">
+          <div class="tl-dot" style="background:${ev.sev==='high'?'var(--red)':ev.sev==='med'?'var(--yellow)':'var(--green)'}"></div>
+          <div class="tl-body">
+            <div class="tl-evt">${ev.evt}</div>
+            <div class="tl-meta">${e.id} · ${ev.time} · <span class="sev sev-${ev.sev}" style="font-size:9px">${ev.sev.toUpperCase()}</span></div>
+          </div>
+        </div>`).join('')}
+      <div style="margin-top:10px;padding:10px;background:var(--bg3);font-size:11px;color:var(--text2)">
+        Showing last 3 events. Full event log covers <strong>${e.anoms}</strong> anomalies in the past 24 hours.
+      </div>
+    </div>
+
+    <div id="tab-block" class="upr-panel">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+        Use these controls to manage access for <strong style="color:var(--text)">${e.id}</strong> on the network. All actions are logged with admin attribution.
+      </div>
+      <div class="block-panel">
+        <div class="block-title">⚠ Enforcement actions</div>
+        <div class="block-desc">These actions affect this entity's network access immediately. Quarantine isolates the entity to a VLAN with no internet access. Block severs all connections.</div>
+        <div class="block-actions">
+          <button class="block-btn danger" onclick="blockEntity('${e.id}','block')">Block entity</button>
+          <button class="block-btn warn" onclick="blockEntity('${e.id}','quarantine')">Quarantine</button>
+          <button class="block-btn safe" onclick="blockEntity('${e.id}','watch')">Add to watchlist</button>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="kv-row"><span class="kv-key">Current network status</span><span class="kv-val green">ACTIVE</span></div>
+        <div class="kv-row"><span class="kv-key">Enforcement history</span><span class="kv-val">None</span></div>
+        <div class="kv-row"><span class="kv-key">Watchlist</span><span class="kv-val">No</span></div>
+      </div>
+    </div>`;
+
+  document.getElementById('m-foot').innerHTML=`
+    <button class="mf-btn" onclick="switchTab(document.querySelector('.upr-tab:nth-child(4)'),'tab-block')">Block / quarantine</button>
+    <button class="mf-btn" onclick="nav('shap',document.querySelectorAll('.nav-item')[3]);shapIdx=${idx};renderShap();closeModal()">View SHAP →</button>
+    <button class="mf-btn primary" onclick="closeModal()">Close</button>`;
+
+  document.getElementById('ent-modal').classList.add('open');
+}
+
+function switchTab(el,panelId){
+  document.querySelectorAll('.upr-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.upr-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  const panel=document.getElementById(panelId);
+  if(panel) panel.classList.add('active');
+}
+
+function blockEntity(id,action){
+  const labels={block:'blocked',quarantine:'quarantined',watch:'added to watchlist'};
+  toast(`${id} ${labels[action]}`,'warn');
+  closeModal();
+}
+
+function closeModal(ev){
+  if(ev&&ev.target!==document.getElementById('ent-modal'))return;
+  document.getElementById('ent-modal').classList.remove('open');
+}
+
+// ── SHAP ──────────────────────────────────────────────────────────────────────
+function renderShap(){
+  const e=ENTS[shapIdx];
+  document.getElementById('shap-ent').textContent=e.id;
+  document.getElementById('shap-risk').textContent=`${e.risk.toUpperCase()} · ${e.score.toFixed(3)}`;
+  document.getElementById('shap-risk').style.color=scoreCol(e.score);
+  document.getElementById('shap-err').textContent=(e.score*0.6).toFixed(3);
+  renderSpark('shap-sp-ln',null,48);
+  const data=shapData(shapIdx).sort((a,b)=>Math.abs(b.shap)-Math.abs(a.shap));
+  const mxS=Math.max(...data.map(d=>Math.abs(d.shap)));
+  const mxA=Math.max(...data.map(d=>d.attn));
+  document.getElementById('shap-rows').innerHTML=data.map(d=>`
+    <div class="shap-row">
+      <div class="shap-feat">${d.feat}</div>
+      <div class="shap-bw"><div class="shap-b ${d.shap>0?'shap-pos':'shap-neg'}" style="width:${Math.abs(d.shap)/mxS*100}%"></div></div>
+      <div class="shap-v">${d.shap>0?'+':''}${d.shap.toFixed(3)}</div>
+    </div>`).join('');
+  document.getElementById('attn-rows').innerHTML=`
+    <div style="display:grid;grid-template-columns:140px 1fr 50px 1fr 50px;gap:7px;margin-bottom:7px;font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">
+      <div>Feature</div><div>SHAP (reliable)</div><div></div><div>Attention (unreliable)</div><div></div>
+    </div>
+    ${data.map(d=>`
+    <div style="display:grid;grid-template-columns:140px 1fr 50px 1fr 50px;gap:7px;margin-bottom:8px;align-items:center">
+      <div style="font-size:10.5px;color:var(--text2);font-family:monospace">${d.feat}</div>
+      <div class="shap-bw"><div class="shap-b ${d.shap>0?'shap-pos':'shap-neg'}" style="width:${Math.abs(d.shap)/mxS*100}%"></div></div>
+      <div style="font-size:9.5px;color:var(--text3);text-align:right">${d.shap>0?'+':''}${d.shap.toFixed(3)}</div>
+      <div class="shap-bw"><div class="shap-b" style="width:${d.attn/mxA*100}%;background:var(--border3)"></div></div>
+      <div style="font-size:9.5px;color:var(--text3);text-align:right">${d.attn.toFixed(3)}</div>
+    </div>`).join('')}`;
+}
+function rotShap(d){shapIdx=(shapIdx+d+ENTS.length)%ENTS.length;renderShap()}
+
+// ── ALERTS ────────────────────────────────────────────────────────────────────
+let alerts=[
+  {sev:'high',icon:'⚠',name:'Data exfiltration burst detected',entity:'USR-0012',time:'2m ago',
+   desc:'Entity USR-0012 exhibited reconstruction error 0.81 (threshold: 0.28). Top SHAP feature: bwd_pkt_len_max (+0.41). Consistent with large outbound data transfer anomaly.',
+   tags:['exfiltration','LSTM-AE','SHAP-confirmed']},
+  {sev:'high',icon:'⚠',name:'Brute force — repeated auth failures',entity:'DEV-0003',time:'11m ago',
+   desc:'47 failed SSH authentication events in 4 minutes. Reconstruction error: 0.63. Pattern matches CICIDS-2017 brute-force signature in LSTM encoder.',
+   tags:['brute-force','SSH','per-entity']},
+  {sev:'med',icon:'◈',name:'Lateral movement — internal port scan',entity:'USR-0031',time:'34m ago',
+   desc:'Unusual port sweep across subnet 192.168.2.x. Entity baseline deviated at step 18/24 in the sequence window. SHAP: fwd_iat_std (+0.22) dominant feature.',
+   tags:['lateral-movement','scan','behavioural']},
+];
+function renderAlerts(){
+  const w=document.getElementById('alert-list');
+  w.innerHTML='';
+  if(!alerts.length){w.innerHTML='<div style="padding:28px;text-align:center;color:var(--text3);font-size:12px">No active alerts</div>';return}
+  alerts.forEach((a,i)=>{
+    const d=document.createElement('div');d.className='alert-item';d.style.animationDelay=i*35+'ms';
+    d.innerHTML=`
+      <div class="alert-ico ${a.sev}">${a.icon}</div>
+      <div class="alert-body">
+        <div class="alert-hd">
+          <span class="sev sev-${a.sev}">${a.sev.toUpperCase()}</span>
+          <span class="alert-name">${a.name}</span>
+          <span class="alert-time">${a.time}</span>
+        </div>
+        <div class="alert-desc">${a.desc}</div>
+        <div class="alert-tags">${a.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+      <button class="alert-act" onclick="resolveAlert(${i},this)">Resolve</button>`;
+    w.appendChild(d);
+  });
+}
+function resolveAlert(i,btn){btn.textContent='…';btn.disabled=true;setTimeout(()=>{alerts.splice(i,1);if(alertCnt>0)alertCnt--;updateBadges();renderAlerts();toast('Alert resolved')},500)}
+function clearAlerts(){alerts=alerts.filter(a=>a.sev==='high');renderAlerts();toast('Resolved alerts cleared')}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function tgl(id){document.getElementById(id).classList.toggle('on')}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function toast(msg,type=''){
+  const w=document.getElementById('tw');
+  const t=document.createElement('div');
+  t.className=`toast${type?' '+type:''}`;t.textContent=msg;
+  w.appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),180)},3000);
+}
+</script>
+</body>
+</html>
